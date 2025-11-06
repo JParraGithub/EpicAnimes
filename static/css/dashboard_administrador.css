@@ -183,7 +183,34 @@ body{
   padding:12px;
 }
 .chart-box h3{ margin: 6px 0 10px; }
-.chart-box.large{ flex:1; min-width:320px; max-width:820px; }
+.chart-box.large{
+  flex:1;
+  min-width:320px;
+  max-width:820px; 
+}
+/* Expandir ancho del gráfico de Ventas por Usuario para aprovechar el espacio */
+#ventasPorUsuarioBox{ flex:1 1 100%; max-width:none; width:100%; }
+#ventasPorUsuarioBox .ventas-usuarios-chart{ min-height:420px; }
+/* Hacer que el gráfico de líneas use también todo el ancho */
+#ventasActividadBox{ flex:1 1 100%; max-width:none; width:100%; }
+/* Donut Estado Global: ocupar mismo ancho/alto que los otros */
+#estadoGlobalBox{ flex:1 1 100%; max-width:none; width:100%; }
+#estadoGlobalBox .ventas-usuarios-chart{ min-height:420px; }
+#estadoGlobalBox canvas{ height:420px !important; }
+/* Alineación y espaciado de filtros (rango/top/presencia/ventana) */
+#ventasPorUsuarioBox .table-tools{ display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px; }
+/* Columna izquierda: 2 filas (Rango arriba, Top abajo) */
+#ventasPorUsuarioBox .table-tools .left{ display:grid; grid-auto-rows:min-content; gap:10px; }
+/* Columna derecha: presencia + ventana */
+#ventasPorUsuarioBox .table-tools .right{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-left:auto; }
+#ventasPorUsuarioBox .filters-range,
+#ventasPorUsuarioBox .filters-top{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+#ventasPorUsuarioBox .filters-range label,
+#ventasPorUsuarioBox .filters-top label{ margin:0 6px 0 0; line-height:1; color:#cfe6ff; }
+#ventasPorUsuarioBox .chip-group{ display:flex; gap:10px; flex-wrap:wrap; }
+#ventasPorUsuarioBox .chip-group .btn{ min-width:72px; text-align:center; padding:8px 14px; border-radius:14px; }
+#ventasPorUsuarioBox .chart-filter-label{ margin-right:4px; }
+#ventasPorUsuarioBox #toggleVentasUsuariosPresence{ margin:0 8px; }
 .chart-box.small{ width:340px; }
 .chart-toggle-group{
   display:flex;
@@ -497,11 +524,23 @@ body{
 .section-group canvas {
   display: block;
   width: 100% !important;
-  height: 320px !important;   /* alto fijo */
+  height: 360px !important;   /* alto base */
 }
 
 @media (max-width: 768px){
-  .section-group canvas { height: 220px !important; }
+  .section-group canvas { height: 240px !important; }
+}
+
+/* Igualar altura entre gráficos principales */
+#ventasActividadBox canvas,
+#ventasPorUsuarioBox canvas { height: 420px !important; }
+@media (max-width: 1100px){
+  #ventasActividadBox canvas,
+  #ventasPorUsuarioBox canvas { height: 360px !important; }
+}
+@media (max-width: 768px){
+  #ventasActividadBox canvas,
+  #ventasPorUsuarioBox canvas { height: 260px !important; }
 }
 .data-table tr.clickable { cursor: pointer; }
 .data-table tr.clickable:hover {
@@ -702,3 +741,9 @@ body{
 
 #pieResumenRol .summary-inline-wrap { display:flex; justify-content:flex-end; gap:24px; flex-wrap:nowrap; overflow:auto; }
 #pieResumenRol .summary-inline-item { white-space:nowrap; color:#cfe6ff; font-size:14px; }
+/* Reordena filas: Rango arriba izquierda; Top debajo izquierda; Presencia/ventana a la derecha */
+#ventasPorUsuarioBox .table-tools{ display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:14px; }
+#ventasPorUsuarioBox .table-tools .left{ display:grid; grid-auto-rows:min-content; gap:10px; align-items:center; }
+#ventasPorUsuarioBox .filters-range,
+#ventasPorUsuarioBox .filters-top{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+#ventasPorUsuarioBox .table-tools .right{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-left:auto; }

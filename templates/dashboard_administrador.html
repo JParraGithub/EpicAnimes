@@ -1,7 +1,4 @@
 {% load static %}
-
-</html>
-{% load static %}
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -58,7 +55,7 @@
             <a class="btn" href="#" onclick="document.querySelector('.sidebar nav a[data-section=\'vendedores\']').click(); return false;"><i class="fas fa-user-tie"></i> Vendedores</a>
             <a class="btn" href="#" onclick="document.querySelector('.sidebar nav a[data-section=\'usuarios_gestion\']').click(); return false;"><i class="fas fa-users-cog"></i> Usuarios</a>
             <a class="btn" href="#" onclick="document.querySelector('.sidebar nav a[data-section=\'stock\']').click(); return false;"><i class="fas fa-warehouse"></i> Stock</a>
-            <a class="btn" href="#" onclick="document.querySelector('.sidebar nav a[data-section=\'chartline\']').click(); return false;"><i class="fas fa-chart-line"></i> Gráfico de Ventas</a>
+            <a class="btn" href="#" onclick="document.querySelector('.sidebar nav a[data-section=\'graficos\']').click(); return false;"><i class="fas fa-chart-line"></i> Gráfico de Ventas</a>
             <a class="btn" href="#" onclick="document.querySelector('.sidebar nav a[data-section=\'postulaciones\']').click(); return false;"><i class="fas fa-user-plus"></i> Postulaciones</a>
             <a class="btn" href="{% url 'index' %}" class="fas fa-sign-out-alt"></i> Salir</a>
           </div>
@@ -112,7 +109,7 @@
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
       <!-- Gestión Vendedores -->
       <section id="vendedores" class="section-group">
@@ -260,54 +257,57 @@
       <!-- Gráficos -->
 
       <!-- GRÁFICO DE LINEAS-->
-      <div class="graficos-subsection">
-        <h2><i class="fas fa-chart-line"></i> Gráficos de ventas y actividad</h2>
-        <div class="charts-wrapper">
-          <div class="chart-box large" id="ventasActividadBox">
-            <div class="table-tools" style="margin-bottom:8px;">
-              <div class="left">
-                <label for="ventasActividadRange" style="color:#cfe6ff; font-size:14px; margin-right:8px;">Rango:</label>
-                <div class="chip-group" data-select="#ventasActividadRange" style="display:inline-flex; gap:8px; flex-wrap:wrap;">
-                  <a href="#" class="btn ghost" data-value="30">30 días</a>
-                  <a href="#" class="btn ghost" data-value="90">90 días</a>
-                  <a href="#" class="btn ghost" data-value="180">180 días</a>
+      <section id="graficos" class="section-group">
+        <br>
+        <div class="graficos-subsection">
+          <h2><i class="fas fa-chart-line"></i> Gráficos de ventas y actividad</h2>
+          <div class="charts-wrapper">
+            <div class="chart-box large" id="ventasActividadBox">
+              <div class="table-tools" style="margin-bottom:8px;">
+                <div class="left">
+                  <label for="ventasActividadRange" style="color:#cfe6ff; font-size:14px; margin-right:8px;">Rango:</label>
+                  <div class="chip-group" data-select="#ventasActividadRange" style="display:inline-flex; gap:8px; flex-wrap:wrap;">
+                    <a href="#" class="btn ghost" data-value="30">30 días</a>
+                    <a href="#" class="btn ghost" data-value="90">90 días</a>
+                    <a href="#" class="btn ghost" data-value="180">180 días</a>
+                  </div>
+                  <select id="ventasActividadRange" style="display:none;">
+                    <option value="30">Ultimos 30 dias</option>
+                    <option value="90">Ultimos 90 dias</option>
+                    <option value="180">Ultimos 180 dias</option>
+                  </select>
                 </div>
-                <select id="ventasActividadRange" style="display:none;">
-                  <option value="30">Ultimos 30 dias</option>
-                  <option value="90">Ultimos 90 dias</option>
-                  <option value="180">Ultimos 180 dias</option>
-                </select>
               </div>
-            </div>
-            <div class="chart-toggle-group" id="ventasActividadToggles">
-              <button type="button" class="chart-toggle" data-series="ventas" aria-pressed="true">
-                <span class="chart-toggle__icon chart-toggle__icon--on"><i class="fas fa-check"></i></span>
-                <span class="chart-toggle__icon chart-toggle__icon--off"><i class="fas fa-times"></i></span>
-                <span class="chart-toggle__label">Total vendido</span>
-              </button>
-              <button type="button" class="chart-toggle" data-series="ordenes" aria-pressed="true">
-                <span class="chart-toggle__icon chart-toggle__icon--on"><i class="fas fa-check"></i></span>
-                <span class="chart-toggle__icon chart-toggle__icon--off"><i class="fas fa-times"></i></span>
-                <span class="chart-toggle__label">Ordenes</span>
-              </button>
-              <button type="button" class="chart-toggle" data-series="vendedores" aria-pressed="true">
-                <span class="chart-toggle__icon chart-toggle__icon--on"><i class="fas fa-check"></i></span>
-                <span class="chart-toggle__icon chart-toggle__icon--off"><i class="fas fa-times"></i></span>
-                <span class="chart-toggle__label">Vendedores</span>
-              </button>
-            </div>
-            <div style="position:relative; min-height:320px;">
-              <canvas id="chartVentasActividad"></canvas>
-              <p id="ventasActividadPlaceholder" style="display:none; position:absolute; inset:0; align-items:center; justify-content:center; color:#9fbad6; font-size:14px;">Sin datos disponibles en el periodo seleccionado.</p>
+              <div class="chart-toggle-group" id="ventasActividadToggles">
+                <button type="button" class="chart-toggle" data-series="ventas" aria-pressed="true">
+                  <span class="chart-toggle__icon chart-toggle__icon--on"><i class="fas fa-check"></i></span>
+                  <span class="chart-toggle__icon chart-toggle__icon--off"><i class="fas fa-times"></i></span>
+                  <span class="chart-toggle__label">Total vendido</span>
+                </button>
+                <button type="button" class="chart-toggle" data-series="ordenes" aria-pressed="true">
+                  <span class="chart-toggle__icon chart-toggle__icon--on"><i class="fas fa-check"></i></span>
+                  <span class="chart-toggle__icon chart-toggle__icon--off"><i class="fas fa-times"></i></span>
+                  <span class="chart-toggle__label">Ordenes</span>
+                </button>
+                <button type="button" class="chart-toggle" data-series="vendedores" aria-pressed="true">
+                  <span class="chart-toggle__icon chart-toggle__icon--on"><i class="fas fa-check"></i></span>
+                  <span class="chart-toggle__icon chart-toggle__icon--off"><i class="fas fa-times"></i></span>
+                  <span class="chart-toggle__label">Vendedores</span>
+                </button>
+              </div>
+              <div style="position:relative; min-height:320px;">
+                <canvas id="chartVentasActividad"></canvas>
+                <p id="ventasActividadPlaceholder" style="display:none; position:absolute; inset:0; align-items:center; justify-content:center; color:#9fbad6; font-size:14px;">Sin datos disponibles en el periodo seleccionado.</p>
+              </div>
             </div>
           </div>
         </div>
-      </section>
+      <!-- continúa sección graficos -->
 
-
-      <!-- GRÁFICO DE BARRAS -->
-      </section>
-      <section id="graficos" class="section-group">
+      <br>
+      
+      <!-- GRáFICO DE BARRAS (misma sección) -->
+      <div class="graficos-subsection">
         <br>
         <h2><i class="fas fa-chart-bar"></i> Gráficos de Ventas por Usuario</h2>
         <div class="charts-wrapper">
@@ -327,23 +327,25 @@
                   <option value="180">Ultimos 180 dias</option>
                   <option value="365">Ultimos 365 dias</option>
                 </select>
-              </div>
-              <div class="right chart-filter-group">
-                <label for="selectVentasUsuariosTop" class="chart-filter-label">Top:</label>
-                <div class="chip-group" data-select="#selectVentasUsuariosTop" style="display:inline-flex; gap:8px; flex-wrap:wrap;">
-                  <a href="#" class="btn ghost" data-value="5">5</a>
-                  <a href="#" class="btn ghost" data-value="10">10</a>
-                  <a href="#" class="btn ghost" data-value="15">15</a>
-                  <a href="#" class="btn ghost" data-value="25">25</a>
-                  <a href="#" class="btn ghost" data-value="50">50</a>
+                <div class="filters-top">
+                  <label for="selectVentasUsuariosTop" class="chart-filter-label">Top:</label>
+                  <div class="chip-group" data-select="#selectVentasUsuariosTop" style="display:inline-flex; gap:8px; flex-wrap:wrap;">
+                    <a href="#" class="btn ghost" data-value="5">5</a>
+                    <a href="#" class="btn ghost" data-value="10">10</a>
+                    <a href="#" class="btn ghost" data-value="15">15</a>
+                    <a href="#" class="btn ghost" data-value="25">25</a>
+                    <a href="#" class="btn ghost" data-value="50">50</a>
+                  </div>
+                  <select id="selectVentasUsuariosTop" class="chart-filter-select" style="height: 4vh; display:none;">
+                    <option value="5">Top 5</option>
+                    <option value="10" selected>Top 10</option>
+                    <option value="15">Top 15</option>
+                    <option value="25">Top 25</option>
+                    <option value="50">Top 50</option>
+                  </select>
                 </div>
-                <select id="selectVentasUsuariosTop" class="chart-filter-select" style="height: 4vh; display:none;">
-                  <option value="5">Top 5</option>
-                  <option value="10" selected>Top 10</option>
-                  <option value="15">Top 15</option>
-                  <option value="25">Top 25</option>
-                  <option value="50">Top 50</option>
-                </select>
+                </div>
+              <div class="right chart-filter-group">
                 <button type="button" id="toggleVentasUsuariosPresence" class="chart-toggle chart-toggle--compact" data-active="0" aria-pressed="false">
                   <span class="chart-toggle__icon chart-toggle__icon--on"><i class="fas fa-check"></i></span>
                   <span class="chart-toggle__icon chart-toggle__icon--off"><i class="fas fa-times"></i></span>
@@ -371,7 +373,7 @@
               </div>
               <div id="ventasPorUsuarioStats" class="chart-side-cards" aria-live="polite"></div>
             </div>
-          </div>
+      </div>
         </div>
       </section>
       <br>
@@ -784,3 +786,6 @@
   </script>
 </body>
 </html>
+
+
+
