@@ -1731,17 +1731,55 @@ const openEditModal = (row) => {
     if (estadoGlobalTimer) clearTimeout(estadoGlobalTimer);
     estadoGlobalTimer = setTimeout(() => { loadEstadoGlobal(); }, delay);
   };
+
+  // Actualiza el texto de pista (hint) segun rango/presencia para ambos bloques
+  const updateEstadoGlobalHintRuntime = () => {
+    try {
+      const container = document.getElementById('estadoGlobalStats');
+      if (!container) return;
+      const hintEl = container.querySelector('.chart-side-card--hint .chart-side-card__hint');
+      if (!hintEl) return;
+      const active = estadoGlobalPresenceActive();
+      if (active) {
+        const win = parseInt(estadoGlobalWindowSel?.value || '180', 10) || 180;
+        hintEl.textContent = `Basado en presencia dentro de ${win} segundos.`;
+      } else {
+        const days = parseInt(estadoGlobalRangeSel?.value || '30', 10) || 30;
+        hintEl.textContent = `Basado en ultimo acceso dentro de los ultimos ${days} dias.`;
+      }
+    } catch (_) {}
+  };
+  const updateVentasUsuariosHintRuntime = () => {
+    try {
+      const container = document.getElementById('ventasPorUsuarioStats');
+      if (!container) return;
+      const hintEl = container.querySelector('.chart-side-card--hint .chart-side-card__hint');
+      if (!hintEl) return;
+      const active = (ventasUsuariosPresenceBtn?.getAttribute('data-active') === '1');
+      if (active) {
+        const win = parseInt(ventasUsuariosWindowSel?.value || '180', 10) || 180;
+        hintEl.textContent = `Basado en presencia dentro de ${win} segundos.`;
+      } else {
+        const days = parseInt(ventasUsuariosRangeSel?.value || '30', 10) || 30;
+        hintEl.textContent = `Basado en ultimo acceso dentro de los ultimos ${days} dias.`;
+      }
+    } catch (_) {}
+  };
   updateEstadoGlobalPresenceUI();
-  estadoGlobalRangeSel?.addEventListener('change', () => scheduleEstadoGlobalLoad(120));
-  estadoGlobalWindowSel?.addEventListener('change', () => { if (estadoGlobalPresenceActive()) scheduleEstadoGlobalLoad(0); });
-  estadoGlobalPresenceBtn?.addEventListener('click', () => { const active = estadoGlobalPresenceActive(); estadoGlobalPresenceBtn.setAttribute('data-active', active ? '0' : '1'); updateEstadoGlobalPresenceUI(); scheduleEstadoGlobalLoad(0); });
+  estadoGlobalRangeSel?.addEventListener('change', () => { scheduleEstadoGlobalLoad(120); setTimeout(updateEstadoGlobalHintRuntime, 200); });
+  estadoGlobalWindowSel?.addEventListener('change', () => { if (estadoGlobalPresenceActive()) scheduleEstadoGlobalLoad(0); setTimeout(updateEstadoGlobalHintRuntime, 200); });
+  estadoGlobalPresenceBtn?.addEventListener('click', () => { const active = estadoGlobalPresenceActive(); estadoGlobalPresenceBtn.setAttribute('data-active', active ? '0' : '1'); updateEstadoGlobalPresenceUI(); scheduleEstadoGlobalLoad(0); setTimeout(updateEstadoGlobalHintRuntime, 200); });
   if (ensureEstadoGlobalRefs()) {
     scheduleEstadoGlobalLoad(200);
+    setTimeout(updateEstadoGlobalHintRuntime, 500);
   } else {
     // Si el DOM aún no está listo, agenda tras DOMContentLoaded
     document.addEventListener('DOMContentLoaded', () => scheduleEstadoGlobalLoad(200));
   }
-  window.addEventListener('admin:data-changed', () => scheduleEstadoGlobalLoad(400));
+  window.addEventListener('admin:data-changed', () => { scheduleEstadoGlobalLoad(400); setTimeout(updateEstadoGlobalHintRuntime, 600); });
+
+
+
 
 
 
