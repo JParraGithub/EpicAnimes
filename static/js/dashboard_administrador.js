@@ -1525,6 +1525,10 @@ const openEditModal = (row) => {
       if (id === 'usuarios_gestion') { loadUsuarios(); }
       if (id === 'stock') { stopUsuariosRealtime(); stopVendedoresRealtime(); loadStock(); }
       if (id === 'postulaciones') { stopUsuariosRealtime(); stopVendedoresRealtime(); loadPostulaciones(); }
+      if (id === 'graficos') {
+        // Asegura que los charts se ajusten al hacerse visible la sección
+        setTimeout(() => { try { window.dispatchEvent(new Event('resize')); } catch (_) {} }, 50);
+      }
     });
   });
 
@@ -1738,7 +1742,6 @@ const openEditModal = (row) => {
     document.addEventListener('DOMContentLoaded', () => scheduleEstadoGlobalLoad(200));
   }
   window.addEventListener('admin:data-changed', () => scheduleEstadoGlobalLoad(400));
-
 
 
 
