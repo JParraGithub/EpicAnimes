@@ -1,0 +1,148 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EpicAnimes</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="{% static 'css/login.css' %}?v=6">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+    <div class="container-main d-flex align-items-center justify-content-center">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse justify-content-center" id="navMenu">
+        <div class="login-nav-inner">
+          <a class="navbar-brand me-3" href="{% url 'index' %}">EpicAnimes</a>
+          <ul class="navbar-nav align-items-lg-center mb-3 mb-lg-0">
+            <li class="nav-item"><a class="nav-link" href="{% url 'index' %}">Inicio</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'sobre_nosotros' %}">Sobre nosotros</a></li>
+            <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'contacto' %}active{% endif %}" href="{% url 'contacto' %}">Contáctanos</a></li>
+          </ul>
+          <a class="login-nav-cta" href="{% url 'signup' %}"><i class="fa fa-user-plus"></i> Crear cuenta</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="login-wrapper">
+    {% if messages %}
+      <div class="container-main login-messages">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    <div class="login-card">
+      <div class="text-center mb-4">
+        <span class="login-pill">Acceso seguro</span>
+        <h1 class="h3 mb-2 login-title"><span style="letter-spacing:.2px">Bienvenido de vuelta</span></h1>
+        <p class="login-subtitle mb-0">Ingresa a tu cuenta para continuar explorando el catálogo.</p>
+      </div>
+      {% if form.non_field_errors %}
+        <div class="alert alert-warning" role="alert">
+          {% for error in form.non_field_errors %}
+            {{ error }}<br>
+          {% endfor %}
+        </div>
+      {% endif %}
+      <form method="post" class="login-form" novalidate>
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ next|default:'/accounts/profile/' }}">
+        <div class="login-field">
+          <label class="login-label" for="id_username"><i class="fa fa-user"></i> Usuario</label>
+          <div class="login-input-wrap">
+            <i class="fa fa-user login-icon-left"></i>
+            <input id="id_username" name="username" type="text" class="login-input" placeholder="Tu usuario" value="{{ form.username.value|default:'' }}" required>
+          </div>
+          {% if form.username.errors %}
+            <div class="form-text text-danger">{{ form.username.errors|striptags }}</div>
+          {% endif %}
+        </div>
+        <div class="login-field">
+          <label class="login-label" for="id_password"><i class="fa fa-lock"></i> Contraseña</label>
+          <div class="login-input-wrap">
+            <i class="fa fa-key login-icon-left"></i>
+            <input id="id_password" name="password" type="password" class="login-input" placeholder="Tu contraseña" required>
+            <span class="login-icon-right" id="togglePwd" title="Mostrar/Ocultar"><i class="fa fa-eye"></i></span>
+          </div>
+          {% if form.password.errors %}
+            <div class="form-text text-danger">{{ form.password.errors|striptags }}</div>
+          {% endif %}
+        </div>
+        <div class="login-field">
+          <label class="login-label" for="id_otp"><i class="fa fa-shield"></i> Código de verificación</label>
+          <div class="login-input-wrap">
+            <i class="fa fa-shield-halved login-icon-left"></i>
+            <input id="id_otp" name="otp" type="text" inputmode="numeric" pattern="\d{6}" class="login-input" placeholder="123456">
+          </div>
+          <div class="d-flex align-items-center gap-2 mt-2">
+            <button type="button" id="btnSendOtp" class="btn btn-sm btn-outline-primary">Enviar código de verificación</button>
+            <small id="otpStatus" class="text-muted"></small>
+          </div>
+          <div class="login-helper">Recibirás un código de 6 dígitos por correo.</div>
+        </div>
+        <div class="d-flex justify-content-between align-items-center mb-3">
+          <a class="small login-link" href="{% url 'password_reset' %}">¿Olvidaste tu contraseña?</a>
+        </div>
+        <button type="submit" class="login-cta">Iniciar sesión</button>
+      </form>
+      <div class="text-center mt-4">
+        <span class="text-muted">¿Aún no tienes cuenta? <a class="login-link" href="{% url 'signup' %}"><br> Registrate Aquí</a></span>
+      </div>
+    </div>
+  </main>
+
+  <footer class="text-center text-muted pb-4">
+    <small>&copy; <span id="currentYear"></span> EpicAnimes. Todos los derechos reservados.</small>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      try { document.getElementById('currentYear').textContent = new Date().getFullYear(); } catch (e) {}
+      const p = document.getElementById('id_password');
+      const t = document.getElementById('togglePwd');
+      if (t && p) {
+        t.addEventListener('click', () => {
+          const on = p.type === 'password';
+          p.type = on ? 'text' : 'password';
+          t.innerHTML = `<i class="fa ${on ? 'fa-eye-slash' : 'fa-eye'}"></i>`;
+        });
+      }
+
+      const btn = document.getElementById('btnSendOtp');
+      const u = document.getElementById('id_username');
+      const status = document.getElementById('otpStatus');
+      const metaCsrf = document.querySelector('meta[name="csrf-token"]');
+      const csrftoken = metaCsrf ? metaCsrf.getAttribute('content') : '';
+      if (btn && u) {
+        btn.addEventListener('click', async () => {
+          const username = (u.value || '').trim();
+          if (!username) { if (status) status.textContent = 'Ingresa tu usuario primero.'; return; }
+          btn.disabled = true; if (status) status.textContent = 'Enviando...';
+          try {
+            const resp = await fetch('/accounts/send-otp/', { method: 'POST', headers: { 'X-CSRFToken': csrftoken, 'X-Requested-With': 'XMLHttpRequest', 'Content-Type': 'application/x-www-form-urlencoded' }, body: 'username=' + encodeURIComponent(username) });
+            const data = await resp.json().catch(() => ({}));
+            if (!resp.ok) throw new Error(data.error || 'Error enviando el código de verificación');
+            if (status) status.textContent = 'Código enviado. Revisa tu correo.';
+          } catch (e) {
+            if (status) status.textContent = (e.message || 'No se pudo enviar');
+          } finally {
+            setTimeout(() => { btn.disabled = false; }, 12000);
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html>
+

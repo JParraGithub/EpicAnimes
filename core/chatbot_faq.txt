@@ -1,0 +1,24 @@
+Pregunta: ¿Cuál es el horario de atención?
+Respuesta: Atendemos en línea todos los días de 09:00 a 21:00 hrs. Si escribes fuera de ese horario te responderemos lo antes posible al siguiente día hábil.
+
+Pregunta: ¿Cuánto tarda el envío?
+Respuesta: Los envíos a Santiago demoran entre 24 y 48 horas hábiles y a regiones entre 3 y 5 días hábiles. Te compartiremos el número de seguimiento por correo.
+
+Pregunta: ¿Qué opciones de pago aceptan?
+Respuesta: Puedes pagar con PayPal, tarjetas de crédito y débito internacionales o transferencia bancaria nacional. Escríbenos si necesitas otra alternativa.
+
+Pregunta: ¿Puedo retirar en tienda?
+Respuesta: Por ahora solo realizamos ventas online con despacho. Estamos trabajando para habilitar un punto de retiro, lo anunciaremos en nuestras redes.
+
+Pregunta: ¿Cómo seguimiento mi pedido?
+Respuesta: Revisa el correo de confirmación, ahí encontrarás el link de seguimiento. Si no lo recibiste contáctanos indicando tu número de orden para reenviártelo.
+
+Pregunta: ¿Qué hago si mi producto llegó dañado?
+Respuesta: Lamentamos el inconveniente. Escríbenos dentro de los primeros 5 días con fotos del daño y el número de orden, coordinaremos el cambio o reembolso.
+
+Pregunta: ¿Realizan envíos internacionales?
+Respuesta: Sí, enviamos a la mayoría de los países de Latinoamérica con DHL. Los costos pueden variar, consúltanos indicando tu ciudad para cotizar con precisión.
+
+Pregunta: ¿Ofrecen preventas?
+Respuesta: Sí, abrimos preventas con cupos limitados. Revisa la sección de novedades o suscríbete a nuestro newsletter para enterarte antes que todos.
+

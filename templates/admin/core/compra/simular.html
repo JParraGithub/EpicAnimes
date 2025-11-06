@@ -1,0 +1,36 @@
+{% extends "admin/base_site.html" %}
+{% load static %}
+{% block title %}Simular compras de usuarios{% endblock %}
+{% block content %}
+  <div class="content" id="content-main">
+    <h1>Simular compras de usuarios</h1>
+    <p>Genera compras de ejemplo para poblar el gráfico de "Ventas por Usuario" del dashboard.</p>
+    <p style="margin-top:8px;">Además, por cada compra simulada se registra la venta al vendedor del producto y se descuenta stock, imitando el flujo real de un usuario comprando.</p>
+    <form method="post" style="max-width:560px; display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+      {% csrf_token %}
+      <div style="grid-column: span 1;">
+        <label for="id_n"><strong>Cantidad de compras</strong></label>
+        <input id="id_n" name="n" type="number" min="1" value="20" class="vTextField" />
+      </div>
+      <div style="grid-column: span 1;">
+        <label for="id_days"><strong>Últimos días</strong></label>
+        <input id="id_days" name="days" type="number" min="1" max="365" value="90" class="vTextField" />
+      </div>
+      <div style="grid-column: span 1;">
+        <label for="id_min_qty"><strong>Cantidad mínima</strong></label>
+        <input id="id_min_qty" name="min_qty" type="number" min="1" value="1" class="vTextField" />
+      </div>
+      <div style="grid-column: span 1;">
+        <label for="id_max_qty"><strong>Cantidad máxima</strong></label>
+        <input id="id_max_qty" name="max_qty" type="number" min="1" value="3" class="vTextField" />
+      </div>
+      <div style="grid-column: span 2; margin-top:6px;">
+        <input type="submit" value="Generar compras simuladas" class="default" />
+        <a href="{% url 'admin:core_compra_changelist' %}" class="button" style="margin-left:8px;">Volver a Compras</a>
+      </div>
+    </form>
+  </div>
+{% endblock %}
+
+
+

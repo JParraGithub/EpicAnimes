@@ -1,0 +1,136 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EpicAnimes | Sobre nosotros</title>
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="{% static 'css/index.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'css/sobre_nosotros.css' %}">
+  <link rel="stylesheet" href="{% static 'css/chatbot.css' %}?v=1">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+    <div class="container-main d-flex align-items-center justify-content-between">
+      <a class="navbar-brand me-3" href="{% url 'index' %}">EpicAnimes</a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navMenu">
+        <ul class="navbar-nav align-items-lg-center me-auto mb-3 mb-lg-0">
+          <li class="nav-item"><a class="nav-link" href="{% url 'index' %}">Inicio</a></li>
+          <li class="nav-item"><a class="nav-link active" href="{% url 'sobre_nosotros' %}">Sobre nosotros</a></li>
+          <li class="nav-item"><a class="nav-link" href="{% url 'index' %}#productos">Catálogo</a></li>
+          <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'contacto' %}active{% endif %}" href="{% url 'contacto' %}">Contáctanos</a></li>
+        </ul>
+        <a class="btn btn-light" href="{% url 'index' %}#productos">Explorar productos</a>
+      </div>
+    </div>
+  </nav>
+
+  <main class="about-wrapper">
+    <section class="about-hero">
+      <div class="about-hero__content">
+        <span class="about-pill">Nuestra historia</span>
+        <h1>Somos la plataforma que conecta a la comunidad otaku con sus tesoros favoritos.</h1>
+        <p>
+          En EpicAnimes reunimos a coleccionistas, tiendas especializadas y fans apasionados en un solo lugar.
+          Creamos una experiencia de compra cuidada, transparente y cercana para que cada figura, manga o accesorio
+          llegue a las manos correctas.
+        </p>
+        <div class="d-flex flex-column flex-sm-row gap-3">
+          <a class="btn btn-light" href="{% url 'index' %}#productos">Descubrir catálogo</a>
+          <a class="btn btn-outline-light" href="{% url 'signup' %}">Crear cuenta</a>
+        </div>
+      </div>
+      <div class="about-hero__image">
+        <img src="{% static 'images/Imagen2.png' %}" alt="Coleccionistas viendo figuras de anime">
+      </div>
+    </section>
+
+    <section class="about-stats">
+      <div>
+        <h3>+250</h3>
+        <p>Pedidos entregados mensualmente a fans de todo el país.</p>
+      </div>
+      <div>
+        <h3>Comunidades</h3>
+        <p>Eventos, lanzamientos y espacios exclusivos para fans.</p>
+      </div>
+      <div>
+        <h3>Confianza</h3>
+        <p>Pagos seguros, stock verificado y soporte cercano.</p>
+      </div>
+    </section>
+
+    <section class="about-mission">
+      <div class="card about-card">
+        <h2>Nuestra misión</h2>
+        <p>
+          EpicAnimes nace para resolver la necesidad de encontrar merchandising auténtico de anime en Latinoamérica.
+          Buscamos elevar la experiencia de compra con logística ágil, seguimiento claro y vendedores verificados.
+          Queremos que coleccionar sea tan emocionante como disfrutar tu serie favorita.
+        </p>
+      </div>
+      <div class="card about-card">
+        <h2>Nuestro compromiso</h2>
+        <ul>
+          <li>Catálogo 100% orientado al universo anime y cultura geek.</li>
+          <li>Vendedores especializados que conocen cada línea y edición limitada.</li>
+          <li>Dashboard inteligente para que admin y sellers gestionen stock y ventas en tiempo real.</li>
+          <li>Atención al cliente con foco en la comunidad y la transparencia.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="about-cta">
+      <div class="card about-card text-center">
+        <h2>¿Listo para encontrar tu próxima pieza legendaria?</h2>
+        <p>Regístrate, explora las colecciones y lleva a tu vitrina los productos que siempre quisiste.</p>
+        <div class="d-flex flex-column flex-sm-row justify-content-center gap-3 mt-3">
+          <a class="btn btn-light" href="{% url 'index' %}#productos">Explorar catálogo</a>
+          <a class="btn btn-outline-light" href="{% url 'signup' %}">Crear cuenta</a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="container-main text-center text-md-start">
+      <div class="row g-4">
+        <div class="col-md-6">
+          <div class="contact-card">
+            <h5>Servicio al cliente</h5>
+            <p>Escríbenos a <a href="mailto:hola@epicanimes.cl">epicanimes@gmail.cl</a></p>
+            <p>Whatsapp: +56 9 5555 5555</p>
+          </div>
+        </div>
+        <div class="col-md-6">
+          <div class="contact-card">
+            <h5>Síguenos</h5>
+            <p>
+              <a href="#"><i class="fab fa-instagram"></i> Instagram</a> ·
+              <a href="#"><i class="fab fa-tiktok"></i> TikTok</a> ·
+              <a href="#"><i class="fab fa-youtube"></i> YouTube</a>
+            </p>
+          </div>
+        </div>
+      </div>
+      <p class="text-center text-muted mt-4 mb-0">&copy; <span id="currentYear"></span> EpicAnimes. Todos los derechos reservados.</p>
+    </div>
+  </footer>
+
+  {% include 'includes/chatbot_popup.html' %}
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script defer src="{% static 'js/chatbot.js' %}?v=1"></script>
+  <script>
+    try {
+      document.getElementById('currentYear').textContent = new Date().getFullYear();
+    } catch (err) {}
+  </script>
+</body>
+</html>

@@ -1,0 +1,26 @@
+<div id="chatbot-bubble" class="chatbot-bubble" aria-label="Abrir asistente virtual">
+  <i class="fa fa-comments"></i>
+</div>
+<div id="chatbot-panel" class="chatbot-panel" role="dialog" aria-modal="true" aria-labelledby="chatbotTitle" hidden>
+  <header class="chatbot-header">
+    <div>
+      <strong id="chatbotTitle">Asistente EpicChat</strong>
+      <small class="text-muted d-block">Preguntas frecuentes y soporte rápido</small>
+    </div>
+    <button id="chatbot-close" class="btn-close" aria-label="Cerrar"></button>
+  </header>
+  <section id="chatbot-messages" class="chatbot-messages">
+    <div class="chatbot-message bot">
+      ¡Hola! Soy EpicChat. Pregúntame sobre envíos, pagos, preventas u otra duda y te responderé al instante.
+    </div>
+  </section>
+  <section class="chatbot-suggestions" aria-label="Preguntas sugeridas">
+    <button class="chatbot-suggestion">¿Cuál es el horario de atención?</button>
+    <button class="chatbot-suggestion">¿Cuánto tarda el envío?</button>
+    <button class="chatbot-suggestion">¿Cómo seguimiento mi pedido?</button>
+  </section>
+  <form id="chatbot-form" class="chatbot-form" autocomplete="off">
+    <input type="text" id="chatbot-input" name="message" class="form-control" placeholder="Escribe tu pregunta..." required>
+    <button type="submit" class="btn btn-primary">Enviar</button>
+  </form>
+</div>

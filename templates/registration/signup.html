@@ -1,0 +1,152 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Crear cuenta | EpicAnimes</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="{% static 'css/signup.css' %}?v=2">
+  <meta name="csrf-token" content="{{ csrf_token }}">
+</head>
+<body>
+  <nav class="navbar navbar-expand-lg navbar-light fixed-top">
+    <div class="container-main d-flex align-items-center justify-content-center">
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMenu">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse justify-content-center" id="navMenu">
+        <div class="login-nav-inner">
+          <a class="navbar-brand me-3" href="{% url 'index' %}">EpicAnimes</a>
+          <ul class="navbar-nav align-items-lg-center mb-3 mb-lg-0">
+            <li class="nav-item"><a class="nav-link" href="{% url 'index' %}">Inicio</a></li>
+            <li class="nav-item"><a class="nav-link" href="{% url 'sobre_nosotros' %}">Sobre nosotros</a></li>
+            <li class="nav-item"><a class="nav-link {% if request.resolver_match.url_name == 'contacto' %}active{% endif %}" href="{% url 'contacto' %}">Contáctanos</a></li>
+          </ul>
+          <a class="login-nav-cta" href="{% url 'login' %}"><i class="fa fa-right-to-bracket"></i> Iniciar sesión</a>
+        </div>
+      </div>
+    </div>
+  </nav>
+
+  <main class="login-wrapper">
+    {% if messages %}
+      <div class="container-main login-messages">
+        {% for message in messages %}
+          <div class="alert alert-{{ message.tags|default:'info' }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Cerrar"></button>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+    <div class="login-card">
+      <div class="text-center mb-4">
+        <span class="login-pill signup-pill"><i class="fa fa-wand-magic-sparkles"></i> Únete a la comunidad</span>
+        <h1 class="h3 mb-2 login-title">Crea tu cuenta EpicAnimes</h1>
+        <p class="login-subtitle mb-0">Explora lanzamientos exclusivos, guarda favoritos y recibe recomendaciones personalizadas.</p>
+      </div>
+
+      {% if form.non_field_errors %}
+        <div class="alert alert-warning" role="alert">
+          {% for error in form.non_field_errors %}
+            {{ error }}<br>
+          {% endfor %}
+        </div>
+      {% endif %}
+
+      <form id="signupForm" method="post" class="login-form" novalidate>
+        {% csrf_token %}
+        <div class="login-field">
+          <label class="login-label" for="id_username"><i class="fa fa-user"></i> Usuario</label>
+          <div class="login-input-wrap">
+            <i class="fa fa-user login-icon-left"></i>
+            <input id="id_username" name="username" type="text" class="login-input" placeholder="Nombre de usuario" value="{{ form.username.value|default:'' }}" required>
+          </div>
+          {% if form.username.errors %}
+            <div class="form-text text-danger">{{ form.username.errors|striptags }}</div>
+          {% endif %}
+        </div>
+
+        <div class="login-field">
+          <label class="login-label" for="id_email"><i class="fa fa-envelope"></i> Correo electrónico</label>
+          <div class="login-input-wrap">
+            <i class="fa fa-envelope login-icon-left"></i>
+            <input id="id_email" name="email" type="email" class="login-input" placeholder="tu@correo.com" value="{{ form.email.value|default:'' }}" required>
+          </div>
+          {% if form.email.errors %}
+            <div class="form-text text-danger">{{ form.email.errors|striptags }}</div>
+          {% endif %}
+        </div>
+
+        <div class="login-field">
+          <label class="login-label" for="id_password1"><i class="fa fa-lock"></i> Contraseña</label>
+          <div class="login-input-wrap">
+            <i class="fa fa-key login-icon-left"></i>
+            <input id="id_password1" name="password1" type="password" class="login-input" placeholder="Mínimo 8 caracteres" required autocomplete="new-password">
+            <span class="login-icon-right" id="togglePwd1" title="Mostrar/Ocultar"><i class="fa fa-eye"></i></span>
+          </div>
+          {% if form.password1.errors %}
+            <div class="form-text text-danger">{{ form.password1.errors|striptags }}</div>
+          {% endif %}
+        </div>
+
+        <div class="password-requirements" id="passwordRequirements" aria-live="polite">
+          <p>Tu contraseña debe incluir:</p>
+          <ul>
+            <li data-req="length"><i class="fa fa-circle"></i> 8 caracteres o más</li>
+            <li data-req="upper"><i class="fa fa-circle"></i> 1 letra mayúscula</li>
+            <li data-req="number"><i class="fa fa-circle"></i> 1 número</li>
+            <li data-req="symbol"><i class="fa fa-circle"></i> 1 símbolo (!@#$…)</li>
+          </ul>
+        </div>
+
+        <div class="login-field">
+          <label class="login-label" for="id_password2"><i class="fa fa-lock"></i> Repite la contraseña</label>
+          <div class="login-input-wrap">
+            <i class="fa fa-lock login-icon-left"></i>
+            <input id="id_password2" name="password2" type="password" class="login-input" placeholder="Confirma tu contraseña" required autocomplete="new-password">
+            <span class="login-icon-right" id="togglePwd2" title="Mostrar/Ocultar"><i class="fa fa-eye"></i></span>
+          </div>
+          <div class="match-indicator" id="passwordMatch" aria-live="polite"></div>
+          {% if form.password2.errors %}
+            <div class="form-text text-danger">{{ form.password2.errors|striptags }}</div>
+          {% endif %}
+        </div>
+
+        <div class="login-field login-field--checkbox">
+          <label class="login-label login-label--checkbox">
+            <input id="id_terms" name="terms" type="checkbox" class="signup-checkbox" {% if form.terms.value %}checked{% endif %} required>
+            <span>Acepto los <a class="login-link" href="#">términos y condiciones</a></span>
+          </label>
+          {% if form.terms.errors %}
+            <div class="form-text text-danger">{{ form.terms.errors|striptags }}</div>
+          {% endif %}
+        </div>
+
+        <button type="submit" class="login-cta">Crear cuenta</button>
+      </form>
+
+      <div class="signup-benefits mt-4">
+        <p class="signup-benefits-title">Con tu cuenta podrás:</p>
+        <ul>
+          <li>Guardar compras y reclamarlas en cualquier dispositivo.</li>
+          <li>Acceder a preventas y eventos exclusivos de la comunidad.</li>
+        </ul>
+      </div>
+
+      <div class="text-center mt-4">
+        <span class="text-muted">¿Ya tienes cuenta? <a class="login-link" href="{% url 'login' %}">Inicia sesión</a></span>
+      </div>
+    </div>
+  </main>
+
+  <footer class="text-center text-muted pb-4">
+    <small>&copy; <span id="currentYear"></span> EpicAnimes. Todos los derechos reservados.</small>
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{% static 'js/signup.js' %}?v=2"></script>
+</body>
+</html>

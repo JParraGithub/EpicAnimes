@@ -1,0 +1,267 @@
+// static/js/dashboard_administrador.js
+document.addEventListener("DOMContentLoaded", () => {
+  // ---------- CSRF + API ----------
+  const getCookie = (name) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return decodeURIComponent(parts.pop().split(";").shift());
+    return null;
+  };
+  const csrftoken = getCookie("csrftoken");
+
+  const api = async (url, { method = "GET", body = null, form = null } = {}) => {
+    const opts = { method, headers: { "X-Requested-With": "XMLHttpRequest" }, credentials: "same-origin" };
+    if (method !== "GET") {
+      if (form instanceof FormData) {
+        if (csrftoken) opts.headers["X-CSRFToken"] = csrftoken;
+        opts.body = form;
+      } else {
+        opts.headers["Content-Type"] = "application/json";
+        if (csrftoken) opts.headers["X-CSRFToken"] = csrftoken;
+        if (body) opts.body = JSON.stringify(body);
+      }
+    }
+    const r = await fetch(url, opts);
+    if (!r.ok) {
+      const t = await r.text().catch(() => "");
+      throw new Error(`HTTP ${r.status} — ${url}\n${t}`);
+    }
+    const ct = r.headers.get("content-type") || "";
+    return ct.includes("application/json") ? r.json() : r.text();
+  };
+
+  // ---------- Nav ----------
+  document.querySelectorAll(".sidebar nav a[data-section]").forEach(a => {
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      document.querySelectorAll(".sidebar nav a").forEach(x => x.classList.remove("active"));
+      a.classList.add("active");
+      const id = a.getAttribute("data-section");
+      document.querySelectorAll(".section-group").forEach(s => s.classList.remove("active"));
+      const sec = document.getElementById(id);
+      if (sec) sec.classList.add("active");
+      if (id === "stock") cargarStock();
+      
+      if (id === "vendedores") cargarVendedores();
+    });
+  });
+
+  // administradores removido
+
+  // ---------- Vendedores (grupo vendedores) ----------
+  const tablaVend = document.getElementById('tablaVendedores');
+  const tbodyVend = tablaVend ? tablaVend.querySelector('tbody') : null;
+  const buscadorVend = document.getElementById('buscador');
+  const filtroEstadoVend = document.getElementById('filtroEstado');
+
+  const renderVendedores = (rows = []) => {
+    if (!tbodyVend) return;
+    const showHash = tablaVend?.dataset.showHash === '1';
+    const totalCols = 7;
+    if (!rows.length) {
+      tbodyVend.innerHTML = `<tr><td colspan="${totalCols}" class="empty-row">Sin vendedores</td></tr>`;
+      return;
+    }
+    tbodyVend.innerHTML = rows.map((u) => {
+      const hashValue = showHash ? (u.password_hash || '****') : '****';
+      return `
+      <tr>
+        <td>${u.id}</td>
+        <td>${u.username}</td>
+        <td>${u.email || ''}</td>
+        <td>${u.date_joined}</td>
+        <td>${hashValue}</td>
+        <td>${u.is_active ? 'Activo' : 'Inactivo'}</td>
+        
+      </tr>
+    `;
+    }).join('');
+  };
+
+  const cargarVendedores = async () => {
+    if (!tbodyVend) return;
+    try {
+      const q = (buscadorVend?.value || '').trim();
+      const estado = (filtroEstadoVend?.value || 'todos');
+      const data = await api(`/api/admin/vendedores/?q=${encodeURIComponent(q)}&estado=${encodeURIComponent(estado)}`);
+      let items = Array.isArray(data.items) ? data.items : [];
+      // solo vendedores (no admins)
+      items = items.filter(u => u.es_vendedor && !u.es_admin);
+      renderVendedores(items);
+    } catch (err) {
+      console.error(err);
+      renderVendedores([]);
+    }
+  };
+
+  buscadorVend?.addEventListener('input', cargarVendedores);
+  filtroEstadoVend?.addEventListener('change', cargarVendedores);
+
+  // ---------- Stock (admin) ----------
+  const tbodyStock = document.querySelector("#tablaStock tbody");
+  const btnCargarStock = document.getElementById("btnCargarStock");
+  const selectVend = document.getElementById("selectVendedorStock");
+  const buscarVend = document.getElementById("buscarVendedorStock");
+
+  const formAcc = document.getElementById("formEditarProductoAdmin");
+  const a_id = document.getElementById("a_id");
+  const a_vendedor = document.getElementById("a_vendedor");
+  const a_nombre = document.getElementById("a_nombre");
+  const a_categoria = document.getElementById("a_categoria");
+  const a_existencias = document.getElementById("a_existencias");
+  const a_critico = document.getElementById("a_critico");
+  const a_imagen = document.getElementById("a_imagen");
+  const a_imagen_preview = document.getElementById("a_imagen_preview");
+  const a_descripcion = document.getElementById("a_descripcion");
+  const btnMod = document.getElementById("btnAccModificar");
+  const btnDel = document.getElementById("btnAccEliminar");
+
+  const setStockLoading = (loading) => {
+    if (!tbodyStock) return;
+    if (loading) tbodyStock.innerHTML = `<tr><td colspan="8" class="empty-row">Cargando…</td></tr>`;
+  };
+
+  const prefillAcciones = async (id) => {
+    try {
+      const p = await api(`/api/admin/producto/${id}/detalle/`);
+      if (a_id) a_id.value = p.id ?? "";
+      if (a_vendedor) a_vendedor.value = p.vendedor ?? "";
+      if (a_nombre) a_nombre.value = p.nombre ?? "";
+      if (a_categoria) a_categoria.value = p.categoria ?? "";
+      if (a_existencias) a_existencias.value = p.existencias ?? "";
+      if (a_critico) a_critico.checked = (p.existencias ?? 0) <= 5;
+      if (a_descripcion) a_descripcion.value = p.descripcion ?? "";
+      if (a_imagen) a_imagen.value = "";
+      if (a_imagen_preview) {
+        if (p.imagen) {
+          a_imagen_preview.src = p.imagen;
+          a_imagen_preview.style.display = '';
+        } else {
+          a_imagen_preview.removeAttribute('src');
+          a_imagen_preview.style.display = 'none';
+        }
+      }
+      formAcc?.scrollIntoView({ behavior: "smooth", block: "start" });
+    } catch (err) {
+      alert("No se pudo cargar el detalle: " + err.message);
+      console.error(err);
+    }
+  };
+
+  const renderStock = (items) => {
+    if (!tbodyStock) return;
+    if (!items.length) {
+      tbodyStock.innerHTML = `<tr><td colspan="8" class="empty-row">Sin productos</td></tr>`;
+      return;
+    }
+    tbodyStock.innerHTML = items.map(p => `
+      <tr class="${(p.existencias ?? p.stock) <= 2 ? "low-stock" : ""} clickable" data-id="${p.id}" title="Click para editar">
+        <td>${p.id}</td>
+        <td>${p.vendedor || "N/D"}</td>
+        <td>${p.nombre}</td>
+        <td>${p.tipo || p.categoria || "-"}</td>
+        <td>${p.imagen ? `<img src="${p.imagen}" alt="${p.nombre}" style="width:50px;height:50px;object-fit:cover;border-radius:6px">` : '<span style="color:#99aab5">Sin imagen</span>'}</td>
+        <td>${(p.descripcion || "").slice(0, 80)}</td>
+        <td>${p.existencias ?? p.stock}</td>
+        <td>${(p.existencias ?? p.stock) <= 5 ? "Si" : "No"}</td>
+      </tr>
+    `).join("");
+  };
+
+  const cargarStock = async () => {
+    try {
+      setStockLoading(true);
+      const data = await api(`/api/admin/productos-bajo-stock/?all=1`);
+      let items = Array.isArray(data.items) ? data.items : [];
+      // build select options
+      const prev = selectVend?.value || "";
+      const nombres = Array.from(new Set(items.map(x => x.vendedor || "N/D"))).sort();
+      if (selectVend) {
+        selectVend.innerHTML = ["<option value=\"\">Todos</option>", ...nombres.map(n => `<option value="${n}">${n}</option>`)].join("");
+        if (prev && nombres.includes(prev)) selectVend.value = prev;
+      }
+      // filters
+      const q = (buscarVend?.value || "").toLowerCase().trim();
+      const sel = selectVend?.value || "";
+      if (q) items = items.filter(x => (x.vendedor || "").toLowerCase().includes(q));
+      if (sel) items = items.filter(x => (x.vendedor || "") === sel);
+      renderStock(items);
+    } catch (err) {
+      console.error(err);
+      if (tbodyStock) tbodyStock.innerHTML = `<tr><td colspan="7" style="color:#ffb020">Error cargando stock</td></tr>`;
+    }
+  };
+
+  btnCargarStock?.addEventListener("click", cargarStock);
+  selectVend?.addEventListener("change", cargarStock);
+  buscarVend?.addEventListener("input", cargarStock);
+
+  // Click en fila para editar
+  tbodyStock?.addEventListener("click", (e) => {
+    const tr = e.target.closest?.("tr");
+    if (!tr || !tr.dataset.id) return;
+    prefillAcciones(tr.dataset.id);
+  });
+
+  formAcc?.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    const id = a_id?.value;
+    if (!id) { alert("Selecciona un producto para editar"); return; }
+    if (a_critico && a_critico.checked) {
+      if (!a_existencias.value || Number(a_existencias.value) > 5) a_existencias.value = 5;
+    }
+    const fd = new FormData(formAcc);
+    try {
+      await api(`/api/admin/producto/${id}/edit/`, { method: "POST", form: fd });
+      alert("Producto actualizado");
+      await cargarStock();
+    } catch (err) {
+      alert("No se pudo guardar: " + err.message);
+      console.error(err);
+    }
+  });
+
+  // Preview de imagen seleccionada
+  a_imagen?.addEventListener('change', () => {
+    if (!a_imagen_preview) return;
+    const f = a_imagen.files && a_imagen.files[0];
+    if (f) {
+      const url = URL.createObjectURL(f);
+      a_imagen_preview.src = url;
+      a_imagen_preview.style.display = '';
+      a_imagen_preview.onload = () => URL.revokeObjectURL(url);
+    } else {
+      a_imagen_preview.removeAttribute('src');
+      a_imagen_preview.style.display = 'none';
+    }
+  });
+
+  // Botones acciones
+  btnMod?.addEventListener('click', () => {
+    if (a_nombre) a_nombre.focus();
+  });
+  btnDel?.addEventListener('click', async () => {
+    const id = a_id?.value;
+    if (!id) return;
+    if (!confirm(`Eliminar producto #${id}?`)) return;
+    try {
+      await api(`/api/admin/producto/${id}/delete/`, { method: 'DELETE' });
+      alert('Producto eliminado');
+      a_id.value = '';
+      formAcc.reset?.();
+      await cargarStock();
+    } catch (err) {
+      alert('No se pudo eliminar: ' + err.message);
+      console.error(err);
+    }
+  });
+
+  // inicio
+  cargarStock();
+  
+  cargarVendedores();
+});
+
+
+
+

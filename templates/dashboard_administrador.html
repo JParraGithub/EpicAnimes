@@ -1,0 +1,728 @@
+{% load static %}
+
+</html>
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EpicAnimes</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600&family=Roboto:wght@300;400;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="{% static 'css/dashboard_administrador.css' %}">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body class="theme-cool">
+  <div class="dashboard-container">
+    <aside class="sidebar">
+      <a class="logo" href="{% url 'index' %}"><i class="fas fa-hat-wizard"></i> <span class="logo-brand">EpicAnimes</span></a>
+      <nav>
+        <a class="active" data-section="bienvenido"><i class="fas fa-handshake"></i> Bienvenido, {{ request.user.username }}</a>
+        <a class="active" data-section="vendedores"><i class="fas fa-user-tie"></i> Gestión Vendedores</a>
+        <a data-section="usuarios_gestion"><i class="fas fa-users-cog"></i> Gestión Usuarios</a>
+        <a data-section="stock"><i class="fas fa-warehouse"></i> Gestión de Stock</a>
+        <a data-section="graficos"><i class="fas fa-chart-line"></i> Gráficos de Ventas</a>
+        <a data-section="postulaciones"><i class="fas fa-user-plus"></i> Postulaciones</a>
+        <a href="{% url 'index' %}"><i class="fas fa-sign-out-alt"></i> Salir</a>
+      </nav>
+    </aside>
+
+    <main class="content">
+      <h1>Panel de Administración</h1>
+
+      <!-- Gestión Vendedores -->
+      <!-- Bienvenida Admin -->
+      <section id="bienvenido" class="section-group active">
+        <h2 class="section-title"><i class="fas fa-user-shield"></i> Hola, {{ request.user.username }}</h2>
+        <div class="kpi-grid">
+          <div class="kpi-card">
+            <i class="fas fa-user icon-large"></i>
+            <div class="data">
+              <p class="title">Usuario</p>
+              <span class="value">{{ request.user.username }}</span>
+            </div>
+          </div>
+          <div class="kpi-card">
+            <i class="fas fa-envelope icon-large"></i>
+            <div class="data">
+              <p class="title">Email</p>
+              <span class="value">{{ request.user.email|default:'-' }}</span>
+            </div>
+          </div>
+        </div>
+        <br>
+        <div class="chart-card">
+          <h3 class="card-title">Accesos rápidos</h3>
+          <div style="display:flex; gap:12px; flex-wrap:wrap;">
+            <a class="btn" href="#" onclick="document.querySelector('.sidebar nav a[data-section=\'vendedores\']').click(); return false;"><i class="fas fa-user-tie"></i> Vendedores</a>
+            <a class="btn" href="#" onclick="document.querySelector('.sidebar nav a[data-section=\'usuarios_gestion\']').click(); return false;"><i class="fas fa-users-cog"></i> Usuarios</a>
+            <a class="btn" href="#" onclick="document.querySelector('.sidebar nav a[data-section=\'stock\']').click(); return false;"><i class="fas fa-warehouse"></i> Stock</a>
+            <a class="btn" href="#" onclick="document.querySelector('.sidebar nav a[data-section=\'chartline\']').click(); return false;"><i class="fas fa-chart-line"></i> Gráfico de Ventas</a>
+            <a class="btn" href="#" onclick="document.querySelector('.sidebar nav a[data-section=\'postulaciones\']').click(); return false;"><i class="fas fa-user-plus"></i> Postulaciones</a>
+            <a class="btn" href="{% url 'index' %}" class="fas fa-sign-out-alt"></i> Salir</a>
+          </div>
+        </div>
+        <br>
+        <div class="charts-wrapper">
+          <div class="chart-box large" id="estadoGlobalBox">
+            <div class="table-tools" style="margin-bottom:8px;">
+              <div class="left">
+                <label for="selectEstadoGlobalRange" style="color:#cfe6ff; font-size:14px; margin-right:8px;">Rango:</label>
+                <select id="selectEstadoGlobalRange">
+                  <option value="30">Ultimos 30 dias</option>
+                  <option value="90">Ultimos 90 dias</option>
+                  <option value="180">Ultimos 180 dias</option>
+                  <option value="365">Ultimos 365 dias</option>
+                </select>
+              </div>
+              <div class="right chart-filter-group">
+                <button type="button" id="toggleEstadoGlobalPresence" class="chart-toggle chart-toggle--compact" data-active="0" aria-pressed="false">
+                  <span class="chart-toggle__icon chart-toggle__icon--on"><i class="fas fa-check"></i></span>
+                  <span class="chart-toggle__icon chart-toggle__icon--off"><i class="fas fa-times"></i></span>
+                  <span class="chart-toggle__label">Sin presencia</span>
+                </button>
+                <label for="selectEstadoGlobalWindow" class="chart-filter-label">Ventana:</label>
+                <select id="selectEstadoGlobalWindow" class="chart-filter-select" style="height: 4vh;" disabled>
+                  <option value="180">180 s</option>
+                  <option value="300">300 s</option>
+                  <option value="600">600 s</option>
+                  <option value="900">900 s</option>
+                </select>
+              </div>
+            </div>
+            <div class="ventas-usuarios-layout">
+              <div class="ventas-usuarios-chart">
+                <canvas id="chartEstadoGlobal"></canvas>
+                <p id="estadoGlobalPlaceholder" class="chart-placeholder">Sin datos.</p>
+              </div>
+              <div id="estadoGlobalStats" class="chart-side-cards" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Gestión Vendedores -->
+      <section id="vendedores" class="section-group">
+        <h2><i class="fas fa-user-tie"></i> Gestión de Vendedores</h2>
+        <div class="table-tools">
+          <div class="left">
+            <input type="text" id="vend_buscar" placeholder="Buscar por nombre o email...">
+            <select id="vend_estado">
+              <option value="todos">Todos</option>
+              <option value="activo">Activos</option>
+              <option value="inactivo">Inactivos</option>
+              <option value="suspendido">Suspendidos</option>
+            </select>
+          </div>
+          <div class="right">
+            <button class="btn" id="vend_btnAgregar">+ Agregar vendedor</button>
+          </div>
+        </div>
+        <table class="data-table" id="tablaVendedores">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>Fecha creación</th>
+              <th>Contraseña</th>
+              <th>Estado</th>
+              <th>Cambiar Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+        <br>
+        <div class="charts-wrapper vendor-charts">
+          <div class="chart-box small" id="vendorEstadoChartBox">
+            <h3 class="chart-title">Activos / Inactivos / Suspendidos</h3>
+            <canvas id="chartVendEstado"></canvas>
+          </div>
+          <div class="chart-box small vendor-top-chart" id="vendorTopChartBox" style="display:none;">
+            <h3 class="chart-title">Top 3 productos de <span id="vendorTopName"></span></h3>
+            <canvas id="chartVendTopProductos"></canvas>
+            <p class="chart-placeholder" id="vendorTopPlaceholder">Busca un vendedor para ver sus productos destacados.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Gestión Usuarios -->
+      <section id="usuarios_gestion" class="section-group">
+        <h2><i class="fas fa-users-cog"></i> Gestión de Usuarios</h2>
+        <div class="table-tools">
+          <div class="left">
+            <input type="text" id="usr_buscar" placeholder="Buscar por usuario o email...">
+            <select id="usr_estado">
+              <option value="todos">Todos</option>
+              <option value="activo">Activos</option>
+              <option value="inactivo">Inactivos</option>
+              <option value="suspendido">Suspendidos</option>
+            </select>
+          </div>
+        </div>
+        <table class="data-table" id="tablaUsuarios">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Usuario</th>
+              <th>Email</th>
+              <th>Rol</th>
+              <th>Estado</th>
+              <th>Cambiar Estado</th>
+              <th>Último acceso</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <!-- Gestión Stock -->
+      <section id="stock" class="section-group">
+        <h2><i class="fas fa-warehouse"></i> Control de Stock por Vendedor</h2>
+        <p class="hint">Filtra por nombre de vendedor para ver y editar su stock.</p>
+        <div class="stock-toolbar">
+          <input type="text" id="stock_buscar" placeholder="Buscar vendedor..." class="select-control" style="max-width:220px">
+          <select id="stock_vendedor" class="select-control"></select>
+          <button class="btn" id="stock_btnRecargar">Actualizar</button>
+        </div>
+        <table class="data-table" id="tablaStock">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Vendedor</th>
+              <th>Nombre</th>
+              <th>Tipo</th>
+              <th>Imagen</th>
+              <th>Descripción</th>
+              <th>Stock</th>
+              <th>Crítico</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+
+        <h3 style="margin:16px 0 8px">Editar Productos</h3>
+        <form id="formEditarProductoAdmin" enctype="multipart/form-data" class="stock-edit-form">
+          <div class="stock-edit-grid">
+            <label>
+              <span>ID</span>
+              <input type="text" id="a_id" name="id" readonly>
+            </label>
+            <label>
+              <span>Vendedor</span>
+              <input type="text" id="a_vendedor" readonly>
+            </label>
+            <label>
+              <span>Nombre producto</span>
+              <input type="text" id="a_nombre" name="nombre" placeholder="Nombre">
+            </label>
+            <label>
+              <span>Tipo producto</span>
+              <input type="text" id="a_categoria" name="categoria" placeholder="Tipo o categoría">
+            </label>
+            <label class="full">
+              <span>Descripción</span>
+              <textarea id="a_descripcion" name="descripcion" rows="2" placeholder="Descripción"></textarea>
+            </label>
+            <label>
+              <span>Stock</span>
+              <input type="number" id="a_existencias" name="existencias" min="0" placeholder="0">
+            </label>
+            <label class="full">
+              <span>Imagen</span>
+              <input type="file" id="a_imagen" name="imagen" accept="image/*">
+              <img id="a_imagen_preview" alt="Preview" style="display:none">
+            </label>
+          </div>
+          <div class="stock-edit-actions">
+            <button type="button" class="btn ghost" id="btnAccCancelar">Cancelar</button>
+            <button type="button" class="btn danger" id="btnAccEliminar">Eliminar</button>
+            <button type="submit" class="btn success" id="btnAccGuardar">Guardar</button>
+          </div>
+        </form>
+      </section>
+
+      <!-- Gráficos -->
+
+      <!-- GRÁFICO DE LINEAS-->
+      <section id="graficos" class="section-group">
+        <h2><i class="fas fa-chart-line"></i> Gráficos de ventas y actividad</h2>
+        <div class="charts-wrapper">
+          <div class="chart-box large" id="ventasActividadBox">
+            <div class="table-tools" style="margin-bottom:8px;">
+              <div class="left">
+                <label for="ventasActividadRange" style="color:#cfe6ff; font-size:14px; margin-right:8px;">Rango:</label>
+                <select id="ventasActividadRange">
+                  <option value="30">Ultimos 30 dias</option>
+                  <option value="90">Ultimos 90 dias</option>
+                  <option value="180">Ultimos 180 dias</option>
+                </select>
+              </div>
+            </div>
+            <div class="chart-toggle-group" id="ventasActividadToggles">
+              <button type="button" class="chart-toggle" data-series="ventas" aria-pressed="true">
+                <span class="chart-toggle__icon chart-toggle__icon--on"><i class="fas fa-check"></i></span>
+                <span class="chart-toggle__icon chart-toggle__icon--off"><i class="fas fa-times"></i></span>
+                <span class="chart-toggle__label">Total vendido</span>
+              </button>
+              <button type="button" class="chart-toggle" data-series="ordenes" aria-pressed="true">
+                <span class="chart-toggle__icon chart-toggle__icon--on"><i class="fas fa-check"></i></span>
+                <span class="chart-toggle__icon chart-toggle__icon--off"><i class="fas fa-times"></i></span>
+                <span class="chart-toggle__label">Ordenes</span>
+              </button>
+              <button type="button" class="chart-toggle" data-series="vendedores" aria-pressed="true">
+                <span class="chart-toggle__icon chart-toggle__icon--on"><i class="fas fa-check"></i></span>
+                <span class="chart-toggle__icon chart-toggle__icon--off"><i class="fas fa-times"></i></span>
+                <span class="chart-toggle__label">Vendedores</span>
+              </button>
+            </div>
+            <div style="position:relative; min-height:320px;">
+              <canvas id="chartVentasActividad"></canvas>
+              <p id="ventasActividadPlaceholder" style="display:none; position:absolute; inset:0; align-items:center; justify-content:center; color:#9fbad6; font-size:14px;">Sin datos disponibles en el periodo seleccionado.</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- GRÁFICO DE BARRAS -->
+      </section>
+      <section id="graficos" class="section-group">
+        <br>
+        <h2><i class="fas fa-chart-bar"></i> Gráficos de Ventas por Usuario</h2>
+        <div class="charts-wrapper">
+          <div class="chart-box large" id="ventasPorUsuarioBox">
+            <div class="table-tools" style="margin-bottom:8px;">
+              <div class="left">
+                <label style="color:#cfe6ff; font-size:14px; margin-right:8px;">Rango:</label>
+                <select id="selectVentasUsuariosRangeInner">
+                  <option value="30">Ultimos 30 dias</option>
+                  <option value="90">Ultimos 90 dias</option>
+                  <option value="180">Ultimos 180 dias</option>
+                  <option value="365">Ultimos 365 dias</option>
+                </select>
+              </div>
+              <div class="right chart-filter-group">
+                <label for="selectVentasUsuariosTop" class="chart-filter-label">Top:</label>
+                <select id="selectVentasUsuariosTop" class="chart-filter-select" style="height: 4vh;">
+                  <option value="5">Top 5</option>
+                  <option value="10" selected>Top 10</option>
+                  <option value="15">Top 15</option>
+                  <option value="25">Top 25</option>
+                  <option value="50">Top 50</option>
+                </select>
+                <button type="button" id="toggleVentasUsuariosPresence" class="chart-toggle chart-toggle--compact" data-active="0" aria-pressed="false">
+                  <span class="chart-toggle__icon chart-toggle__icon--on"><i class="fas fa-check"></i></span>
+                  <span class="chart-toggle__icon chart-toggle__icon--off"><i class="fas fa-times"></i></span>
+                  <span class="chart-toggle__label">Sin presencia</span>
+                </button>
+                <label for="selectVentasUsuariosWindow" class="chart-filter-label">Ventana:</label>
+                <select id="selectVentasUsuariosWindow" class="chart-filter-select" disabled style="height: 4vh;">
+                  <option value="180">180 s</option>
+                  <option value="300">300 s</option>
+                  <option value="600">600 s</option>
+                  <option value="900">900 s</option>
+                </select>
+              </div>
+            </div>
+            <div id="ventasPorUsuarioLayout" class="ventas-usuarios-layout">
+              <div class="ventas-usuarios-chart">
+                <canvas id="chartVentasUsuarios"></canvas>
+                <p id="ventasPorUsuarioPlaceholder" class="chart-placeholder">Sin datos en el periodo seleccionado.</p>
+              </div>
+              <div id="ventasPorUsuarioStats" class="chart-side-cards" aria-live="polite"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+      <br>
+
+
+      
+
+      <!-- Postulaciones -->
+      <section id="postulaciones" class="section-group">
+        <h2><i class="fas fa-user-plus"></i> Postulaciones de vendedores</h2>
+        <div class="table-tools">
+          <div class="left">
+            <input type="text" id="post_buscar" placeholder="Buscar por nombre o email...">
+            <select id="post_estado">
+              <option value="todos">Todos</option>
+              <option value="nuevo">Nuevos</option>
+              <option value="contactado">Contactados</option>
+              <option value="archivado">Archivados</option>
+            </select>
+          </div>
+          <div class="right">
+            <a class="btn primary" id="exportPostExcel" href="#">Exportar Excel</a>
+            <a class="btn primary" id="exportVentasExcel" href="#">Ventas 30 días (Excel)</a>
+          </div>
+        </div>
+        <table class="data-table" id="tablaPostulaciones">
+          <thead>
+            <tr>
+              <th>ID</th>
+              <th>Nombre</th>
+              <th>Email</th>
+              <th>Teléfono</th>
+              <th>Tienda</th>
+              <th>Instagram / Web</th>
+              <th>Mensaje</th>
+              <th>Notas</th>
+              <th>Fecha</th>
+              <th>Estado</th>
+              <th>Acciones</th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal editar -->
+  <div class="modal" id="modalEditar">
+    <div class="card">
+      <h3>Editar Usuario</h3>
+      <label>Nombre</label><input id="editNombre" type="text">
+      <label>Email</label><input id="editEmail" type="email">
+      <label>Contraseña (vacía para no cambiar)</label><input id="editPass" type="password">
+                  <div class="actions">
+        <button class="btn" id="guardarEditar">Guardar</button>
+        <button class="btn danger" id="eliminarUsuario">Eliminar</button>
+        <button class="btn ghost" id="cancelarEditar">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+  <form style="display:none">{% csrf_token %}</form>
+  <script src="{% static 'js/dashboard_administrador.js' %}"></script>
+  <script src="{% static 'js/dashboard_administrador_charts.js' %}"></script>
+  <script src="{% static 'js/dashboard_estado_global.js' %}"></script>
+  <script src="{% static 'js/dashboard_ventas_usuarios_cards.js' %}"></script>
+  <script src="{% static 'js/dashboard_vendedores_estado.js' %}"></script>
+  <script src="{% static 'js/ventas_usuarios_barras.js' %}"></script>
+  
+  <script>
+  (function(){
+    // Fix quick links (Bienvenido) navigation targets and keep accents
+    const quickBox = document.querySelector('#bienvenido .chart-card div');
+    if (quickBox) {
+      const links = quickBox.querySelectorAll('a.btn');
+      const map = ['vendedores','usuarios_gestion','stock','graficos','postulaciones', null];
+      links.forEach((a, i) => {
+        // neutraliza cualquier onclick embebido problemático
+        a.onclick = null;
+        if (i === 3) { a.innerHTML = '<i class="fas fa-chart-line"></i> Gráfico de Ventas'; }
+        if (i === 5) { return; }
+        a.addEventListener('click', (e) => {
+          e.preventDefault();
+          const key = map[i];
+          if (!key) { window.location.href = a.getAttribute('href') || '/'; return; }
+          const target = document.querySelector(`.sidebar nav a[data-section='${key}']`);
+          if (target) target.click();
+        });
+      });
+      const quickTitle = document.querySelector('#bienvenido .chart-card .card-title');
+      if (quickTitle) quickTitle.textContent = 'Accesos rápidos';
+    }
+
+    // Normalize accented labels/headers shown in this template
+    try {
+      const h1 = document.querySelector('main.content h1');
+      if (h1) h1.textContent = 'Panel de Administración';
+      const aVend = document.querySelector('.sidebar nav a[data-section="vendedores"]');
+      if (aVend) aVend.innerHTML = '<i class="fas fa-user-tie"></i> Gestión Vendedores';
+      const aUsr = document.querySelector('.sidebar nav a[data-section="usuarios_gestion"]');
+      if (aUsr) aUsr.innerHTML = '<i class="fas fa-users-cog"></i> Gestión Usuarios';
+      const aStock = document.querySelector('.sidebar nav a[data-section="stock"]');
+      if (aStock) aStock.innerHTML = '<i class="fas fa-warehouse"></i> Gestión de Stock';
+      const aGraf = document.querySelector('.sidebar nav a[data-section="graficos"]');
+      if (aGraf) aGraf.innerHTML = '<i class="fas fa-chart-line"></i> Gráficos de Ventas';
+
+      const vendTitle = document.querySelector('#vendedores h2');
+      if (vendTitle) vendTitle.innerHTML = '<i class="fas fa-user-tie"></i> Gestión de Vendedores';
+      const vendTh = document.querySelectorAll('#tablaVendedores thead th');
+      if (vendTh && vendTh.length >= 6) {
+        if (vendTh[3]) vendTh[3].textContent = 'Fecha creación';
+        if (vendTh[4]) vendTh[4].textContent = 'Contraseña';
+      }
+
+      const usrTitle = document.querySelector('#usuarios_gestion h2');
+      if (usrTitle) usrTitle.innerHTML = '<i class="fas fa-users-cog"></i> Gestión de Usuarios';
+      const usrTh = document.querySelectorAll('#tablaUsuarios thead th');
+      if (usrTh && usrTh.length >= 7) { if (usrTh[5]) usrTh[5].textContent = 'Cambiar Estado'; if (usrTh[6]) usrTh[6].textContent = 'último acceso'; }
+
+      const stockTh = document.querySelectorAll('#stock #tablaStock thead th');
+      if (stockTh && stockTh.length >= 8) {
+        if (stockTh[5]) stockTh[5].textContent = 'Descripción';
+        if (stockTh[7]) stockTh[7].textContent = 'Crítico';
+      }
+
+      const grafTitle = document.querySelector('#graficos h2');
+      if (grafTitle) grafTitle.innerHTML = '<i class="fas fa-chart-line"></i> Gráficos de ventas y actividad';
+
+      const btnVentas = document.getElementById('exportVentasExcel');
+      if (btnVentas) btnVentas.textContent = 'Ventas 30 días (Excel)';
+      const postTh = document.querySelectorAll('#tablaPostulaciones thead th');
+      if (postTh && postTh.length >= 4) {
+        if (postTh[3]) postTh[3].textContent = 'Teléfono';
+      }
+
+      const lblEditPass = document.querySelector('#editPass')?.previousElementSibling;
+      if (lblEditPass && lblEditPass.tagName === 'LABEL') lblEditPass.textContent = 'Contraseña (vacía para no cambiar)';
+      const lblPass2 = document.querySelector('#editPass2')?.previousElementSibling;
+      if (lblPass2 && lblPass2.tagName === 'LABEL') lblPass2.textContent = 'Confirmar contraseña';
+      const lblNewPass2 = document.querySelector('#newPass2')?.previousElementSibling;
+      if (lblNewPass2 && lblNewPass2.tagName === 'LABEL') lblNewPass2.textContent = 'Confirmar contraseña';
+      const lblNewPass = document.querySelector('#newPass')?.previousElementSibling;
+      if (lblNewPass && lblNewPass.tagName === 'LABEL') lblNewPass.textContent = 'Contraseña';
+    } catch (_) {}
+
+    // Vendedores: agregar columna "Cambiar Estado" como badge clickeable con mismo CSS que "Estado"
+    const vendBody = document.querySelector('#tablaVendedores tbody');
+    if (!vendBody) return;
+
+    const getCookie = (name) => {
+      const value = '; ' + document.cookie;
+      const parts = value.split('; ' + name + '=');
+      if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+      return null;
+    };
+    const csrftoken = getCookie('csrftoken');
+
+    const addToggleCell = (tr) => {
+      const tds = tr.querySelectorAll('td');
+      if (tds.length !== 7) return; // insertar solo cuando falta la columna
+      const disabled = tr.getAttribute('data-disabled') === '1';
+      const td = document.createElement('td');
+      const btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'status-badge ' + (disabled ? 'offline' : 'online');
+      btn.dataset.action = 'toggle';
+      btn.textContent = disabled ? 'Inactivo' : 'Activo';
+      td.appendChild(btn);
+      tr.insertBefore(td, tds[tds.length - 1]); // antes de Acciones
+    };
+
+    // Inicializa filas existentes
+    vendBody.querySelectorAll('tr[data-id]').forEach(addToggleCell);
+
+    const mo = new MutationObserver((mutations) => {
+      mutations.forEach((m) => {
+        m.addedNodes.forEach((node) => {
+          if (node.nodeType === 1 && node.matches('tr[data-id]')) {
+            addToggleCell(node);
+          }
+        });
+      });
+    });
+    mo.observe(vendBody, { childList: true });
+
+    vendBody.addEventListener('click', async (ev) => {
+      const btn = ev.target.closest('button[data-action="toggle"]');
+      if (!btn) return;
+      const tr = btn.closest('tr[data-id]');
+      const id = Number(tr?.dataset?.id || '');
+      if (!id) return;
+      const currentlyDisabled = tr.getAttribute('data-disabled') === '1';
+      const newActive = currentlyDisabled; // si estaba inactivo, activar; si activo, desactivar
+      try {
+        const resp = await fetch('/api/admin/vendedores/', {
+          method: 'PUT',
+          headers: Object.assign({ 'Content-Type': 'application/json', 'X-Requested-With': 'XMLHttpRequest' }, csrftoken ? { 'X-CSRFToken': csrftoken } : {}),
+          credentials: 'same-origin',
+          body: JSON.stringify({ id, is_active: newActive })
+        });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        // Actualiza dataset
+        tr.setAttribute('data-disabled', newActive ? '0' : '1');
+        const disabledNow = !newActive;
+        // Actualiza badge de Estado (6ta columna)
+        const estadoBadge = tr.querySelector('td:nth-child(6) .status-badge');
+        if (estadoBadge) {
+          estadoBadge.textContent = disabledNow ? 'Suspendido' : 'Activo';
+          estadoBadge.classList.toggle('online', !disabledNow);
+          estadoBadge.classList.toggle('offline', disabledNow);
+          estadoBadge.classList.toggle('suspended', disabledNow);
+        }
+        // Actualiza badge de cambio (esta celda)
+        btn.textContent = disabledNow ? 'Inactivo' : 'Activo';
+        btn.classList.toggle('online', !disabledNow);
+        btn.classList.toggle('offline', disabledNow);
+        // Recalcula filtro y gráfico en tiempo real
+        setTimeout(() => { applyVendorFilter(); updateVendorEstadoChart(); }, 30);
+      } catch (e) {
+        console.error('No se pudo cambiar el estado', e);
+        alert('No se pudo cambiar el estado.');
+      }
+    });
+
+    // ===== Filtro Activos / Inactivos / Suspendidos y gráfico en tiempo real =====
+    const vendEstadoSel = document.getElementById('vend_estado');
+    const vendBuscarInp = document.getElementById('vend_buscar');
+
+    const rowState = (tr) => {
+      const badge = tr.querySelector('td:nth-child(6) .status-badge');
+      if (!badge) return 'inactivo';
+      const txt = (badge.textContent || '').trim().toLowerCase();
+      if (txt.startsWith('suspend')) return 'suspendido';
+      if (txt.startsWith('activo')) return 'activo';
+      return 'inactivo';
+    };
+
+    const applyVendorFilter = () => {
+      const val = (vendEstadoSel?.value || 'todos').toLowerCase();
+      vendBody.querySelectorAll('tr[data-id]').forEach((tr) => {
+        const st = rowState(tr);
+        const show = (val === 'todos') || (st === val);
+        tr.style.display = show ? '' : 'none';
+      });
+    };
+
+    const computeVendorCounts = () => {
+      let activos = 0, inactivos = 0, suspendidos = 0;
+      vendBody.querySelectorAll('tr[data-id]').forEach((tr) => {
+        if (tr.style.display === 'none') return; // respeta filtro de búsqueda externo
+        const st = rowState(tr);
+        if (st === 'activo') activos++;
+        else if (st === 'suspendido') suspendidos++;
+        else inactivos++;
+      });
+      return { activos, inactivos, suspendidos };
+    };
+
+    const updateVendorEstadoChart = () => {
+      const canvas = document.getElementById('chartVendEstado');
+      if (!canvas) return;
+      const ctx = canvas.getContext('2d');
+      const existing = (window.Chart && Chart.getChart) ? Chart.getChart(canvas) : (canvas.__chart || null);
+      if (existing) existing.destroy();
+      const { activos, inactivos, suspendidos } = computeVendorCounts();
+      const chart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Activos', 'Inactivos', 'Suspendidos'],
+          datasets: [{ data: [activos, inactivos, suspendidos], backgroundColor: ['#37d67a', '#ff5a5f', '#ffb347'], borderWidth: 0 }],
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#cfe6ff' } } } },
+      });
+      canvas.__chart = chart;
+    };
+
+    // Observers para refrescar al cargar/editar/tiempo real
+    let rafId = null;
+    const scheduleRefresh = () => {
+      if (rafId) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(() => { applyVendorFilter(); updateVendorEstadoChart(); });
+    };
+    new MutationObserver(scheduleRefresh).observe(vendBody, { childList: true, subtree: true, characterData: true });
+    vendEstadoSel?.addEventListener('change', () => setTimeout(scheduleRefresh, 50));
+    vendBuscarInp?.addEventListener('input', () => setTimeout(scheduleRefresh, 200));
+    scheduleRefresh();
+
+    // ===== Postulaciones: filtro por estado (cliente) y export con estado =====
+    try {
+      const postEstadoSel = document.getElementById('post_estado');
+      const postBuscarInp = document.getElementById('post_buscar');
+      const postBody = document.querySelector('#tablaPostulaciones tbody');
+      const btnExportPost = document.getElementById('exportPostExcel');
+
+      const applyPostFilter = () => {
+        if (!postBody) return;
+        const val = (postEstadoSel?.value || 'todos').toLowerCase();
+        postBody.querySelectorAll('tr').forEach((tr) => {
+          const estadoCell = tr.querySelector('td:nth-child(10)');
+          const estado = (estadoCell?.textContent || '').trim().toLowerCase();
+          tr.style.display = (val === 'todos' || estado === val) ? '' : 'none';
+        });
+      };
+
+      postEstadoSel?.addEventListener('change', applyPostFilter);
+      if (postBody) new MutationObserver(applyPostFilter).observe(postBody, { childList: true });
+
+      btnExportPost?.addEventListener('click', (ev) => {
+        ev.preventDefault();
+        ev.stopImmediatePropagation();
+        const q = (postBuscarInp?.value || '').trim();
+        const estado = (postEstadoSel?.value || 'todos').toLowerCase();
+        const params = new URLSearchParams();
+        if (q) params.set('q', q);
+        if (estado && estado !== 'todos') params.set('estado', estado);
+        const url = `/api/admin/export/postulaciones.xlsx${params.toString() ? `?${params.toString()}` : ''}`;
+        window.open(url, '_blank');
+      }, true);
+
+    } catch (_) {}
+
+    // ===== Fix: Guardar en modal Editar (fallback handler) =====
+    try {
+      const getCookie = (name) => {
+        const value = '; ' + document.cookie;
+        const parts = value.split('; ' + name + '=');
+        if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+        return null;
+      };
+      const csrftoken = getCookie('csrftoken');
+      const request = async (url, { method = 'GET', body = null } = {}) => {
+        const headers = { 'X-Requested-With': 'XMLHttpRequest' };
+        if (method !== 'GET') {
+          headers['Content-Type'] = 'application/json';
+          if (csrftoken) headers['X-CSRFToken'] = csrftoken;
+        }
+        const resp = await fetch(url, { method, headers, credentials: 'same-origin', body: body ? JSON.stringify(body) : null });
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        return resp.json().catch(() => ({}));
+      };
+
+      // Captura el id/rol al abrir editar
+      document.addEventListener('click', (ev) => {
+        const btn = ev.target.closest('button[data-action="edit"]');
+        if (!btn) return;
+        const row = btn.closest('tr[data-id]');
+        const modal = document.getElementById('modalEditar');
+        if (row && modal) {
+          modal.dataset.editId = row.getAttribute('data-id') || '';
+          modal.dataset.isVendor = row.getAttribute('data-vendor') === '1' ? '1' : '0';
+        }
+      }, true);
+
+      // Fallback guardar que no depende de variables internas
+      const btnGuardar = document.getElementById('guardarEditar');
+      btnGuardar?.addEventListener('click', async (ev) => {
+        try {
+          ev.preventDefault();
+          ev.stopImmediatePropagation();
+          const modal = document.getElementById('modalEditar');
+          const id = Number(modal?.dataset.editId || '');
+          if (!id) return;
+          const username = (document.getElementById('editNombre')?.value || '').trim();
+          const email = (document.getElementById('editEmail')?.value || '').trim();
+          const pass = (document.getElementById('editPass')?.value || '').trim();
+                    const es_vendedor = (modal?.dataset.isVendor === '1');
+          const body = { id, es_vendedor };
+          if (username) body.username = username;
+          body.email = email; // permite vacío
+          if (pass) body.password = pass;
+          await request('/api/admin/vendedores/', { method: 'PATCH', body });
+          // Cierra y recarga para reflejar cambios
+          modal.style.display = 'none';
+          setTimeout(() => location.reload(), 50);
+        } catch (e) {
+          console.error(e);
+          alert('No se pudo guardar.');
+        }
+      }, true);
+    } catch (_) {}
+
+  })();
+  </script>
+</body>
+</html>
+
+
+

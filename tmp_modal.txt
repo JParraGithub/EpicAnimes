@@ -1,0 +1,15 @@
+<div class="modal" id="modalEditar">
+    <div class="card">
+      <h3>Editar Usuario</h3>
+      <label>Nombre</label><input id="editNombre" type="text">
+      <label>Email</label><input id="editEmail" type="email">
+      <label>Contraseña (vacía para no cambiar)</label><input id="editPass" type="password">
+      <label>Confirmar contraseña</label><input id="editPass2" type="password" placeholder="Repite la contraseña">
+      <label>Confirmar contraseña</label><input id="newPass2" type="password" placeholder="Repite la contraseña">
+      <div class="actions">
+        <button class="btn" id="guardarEditar">Guardar</button>
+        <button class="btn danger" id="eliminarUsuario">Eliminar</button>
+        <button class="btn ghost" id="cancelarEditar">Cancelar</button>
+      </div>
+    </div>
+  </div>

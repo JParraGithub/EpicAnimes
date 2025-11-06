@@ -1,0 +1,124 @@
+﻿from django.conf import settings
+from django.db import models
+from django.contrib.auth.models import User
+from django.utils import timezone
+
+class Vendedor(models.Model):
+    usuario = models.OneToOneField(User, on_delete=models.CASCADE)
+    telefono = models.CharField(max_length=20, blank=True, null=True)
+    direccion = models.CharField(max_length=120, blank=True, null=True)
+    fecha_ingreso = models.DateField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.usuario.username}"
+
+class Producto(models.Model):
+    vendedor = models.ForeignKey(Vendedor, on_delete=models.CASCADE, related_name='productos', null=True, blank=True)
+    nombre = models.CharField(max_length=80)
+    descripcion = models.TextField(blank=True)
+    marca = models.CharField(max_length=60)
+    fecha_ingreso = models.DateField(default=timezone.now)
+    calidad = models.CharField(max_length=30)
+    precio = models.DecimalField(max_digits=10, decimal_places=2)
+    existencias = models.IntegerField()
+    categoria = models.CharField(max_length=40)
+    imagen = models.ImageField(upload_to='productos/', null=True, blank=True)
+
+    class Meta:
+        ordering = ("-fecha_ingreso", "nombre")
+
+    def __str__(self):
+        return f"{self.nombre} - {self.marca}"
+
+class Venta(models.Model):
+    vendedor = models.ForeignKey(Vendedor, on_delete=models.CASCADE)
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    cantidad = models.IntegerField()
+    total = models.DecimalField(max_digits=10, decimal_places=2, default=0)
+    fecha_venta = models.DateField(auto_now_add=True)
+
+    def save(self, *args, **kwargs):
+        self.total = self.cantidad * self.producto.precio
+        super(Venta, self).save(*args, **kwargs)
+
+    def __str__(self):
+        return f"{self.vendedor} - {self.producto} ({self.cantidad})"
+
+class Compra(models.Model):
+    cliente = models.CharField(max_length=60)
+    usuario = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="compras",
+    )
+    nombre_completo = models.CharField(max_length=120, blank=True)
+    correo_contacto = models.EmailField(blank=True)
+    telefono_contacto = models.CharField(max_length=30, blank=True)
+    direccion_envio = models.CharField(max_length=180, blank=True)
+    ciudad_envio = models.CharField(max_length=80, blank=True)
+    notas_extra = models.CharField(max_length=250, blank=True)
+    producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
+    valor_producto = models.DecimalField(max_digits=10, decimal_places=2)
+    cantidad = models.IntegerField()
+    fecha_compra = models.DateField(auto_now_add=True)
+    referencia_pago = models.CharField(max_length=100, blank=True, null=True)
+
+    def __str__(self):
+        nombre = self.cliente or (self.usuario.username if self.usuario else "Cliente")
+        return f"{nombre} - {self.producto}"
+
+# Datos guardados para autofill en checkout
+class PerfilCliente(models.Model):
+    user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="perfil_cliente")
+    nombre = models.CharField(max_length=120, blank=True)
+    email = models.EmailField(blank=True)
+    telefono = models.CharField(max_length=30, blank=True)
+    direccion = models.CharField(max_length=180, blank=True)
+    ciudad = models.CharField(max_length=80, blank=True)
+    codigo_postal = models.CharField(max_length=20, blank=True)
+    pais = models.CharField(max_length=60, blank=True, default="Chile")
+    actualizado = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Perfil de {self.user.username}"
+
+# MÃ©tricas globales (para dashboards)
+class DashboardMetricas(models.Model):
+    fecha = models.DateField(auto_now_add=True)
+    total_ventas = models.DecimalField(max_digits=12, decimal_places=2, default=0)
+    total_productos = models.IntegerField(default=0)
+    total_vendedores = models.IntegerField(default=0)
+    total_clientes = models.IntegerField(default=0)
+
+    def __str__(self):
+        return f"MÃ©tricas {self.fecha}"
+
+class PostulacionVendedor(models.Model):
+    nombre = models.CharField(max_length=120)
+    email = models.EmailField()
+    telefono = models.CharField(max_length=30, blank=True)
+    tienda = models.CharField(max_length=120, blank=True)
+    instagram = models.CharField(max_length=180, blank=True)
+    mensaje = models.TextField(blank=True)
+    notas = models.TextField(blank=True, help_text="Notas internas del equipo")
+    fecha_envio = models.DateTimeField(auto_now_add=True)
+    estado = models.CharField(max_length=20, default="nuevo")
+
+    class Meta:
+        ordering = ("-fecha_envio",)
+
+    def __str__(self):
+        return f"Postulación {self.nombre} - {self.email}"
+
+
+class NewsletterSubscriber(models.Model):
+    email = models.EmailField(unique=True)
+    fecha_suscripcion = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("-fecha_suscripcion",)
+
+    def __str__(self):
+        return self.email
