@@ -1,0 +1,67 @@
+<section id="comunidad" class="section alt" data-section="comunidad">
+  <h2 class="section__title">Construido para la comunidad otaku</h2>
+  <p class="section__desc">
+    Eventos, reseñas, streamings y soporte presencial para que siempre tengas un punto de encuentro.
+  </p>
+
+  <div class="community-grid">
+    <article class="community-card glass location-card">
+      <h3><i class="fa fa-location-dot"></i> Ubicación en tiempo real</h3>
+      <p>
+        Paseo Concha y Toro — Av. Concha y Toro 93, parad.41, Local 5,
+        8162829 Puente Alto, Región Metropolitana.
+      </p>
+      <div class="location-meta">
+        <span class="status status--online"><i class="fa fa-signal"></i> En vivo</span>
+        <span>Actualizado cada 5 minutos</span>
+      </div>
+      <a class="btn btn--ghost small" target="_blank"
+         rel="noopener noreferrer"
+         href="https://maps.google.com/?q=Paseo+Concha+y+Toro+Av+Concha+y+Toro+93+Puente+Alto">
+        <i class="fa fa-map"></i> Abrir en Google Maps
+      </a>
+      <small class="muted text-small">
+        Nuestra tienda física comparte inventario con el marketplace para mantener stock sincronizado.
+      </small>
+    </article>
+
+    <article class="community-card glass">
+      <h3><i class="fa fa-store"></i> ¿Quieres vender en EpicAnimes?</h3>
+      <p>
+        Si eres coleccionista, tienda o artista independiente puedes postularte para sumar tu catálogo
+        al marketplace oficial.
+      </p>
+      <form method="get" action="{% url 'contacto' %}">
+        <button class="btn btn--primary" type="submit">
+          <i class="fa fa-paper-plane"></i> Completar postulación
+        </button>
+      </form>
+      <small class="muted text-small">
+        Revisamos cada solicitud manualmente para garantizar autenticidad y buenas prácticas de venta.
+      </small>
+    </article>
+  </div>
+
+  <div class="marquee" aria-label="Franquicias destacadas">
+    <ul class="marquee__track">
+      <li>One Piece</li>
+      <li>Jujutsu Kaisen</li>
+      <li>Naruto</li>
+      <li>Dragon Ball</li>
+      <li>Demon Slayer</li>
+      <li>Chainsaw Man</li>
+      <li>Bleach</li>
+      <li>Hunter x Hunter</li>
+      <li>Salior Moon</li>
+      <li>Haikyu</li>
+      <li>shingeki no kyojin</li>
+      <li>Solo Leveling</li>
+      <li>Slam Dunk</li>
+      <li>Pokemon</li>
+      <li>Digimon</li>
+      <li>Overlord</li>
+      <li>Bochi the Rock</li>
+      <li>Bungo Stray Dogs</li>
+    </ul>
+  </div>
+</section>

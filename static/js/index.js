@@ -1,124 +1,138 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const authModal = document.getElementById("authModal");
-  if (authModal) {
-    let defaultTab = authModal.getAttribute("data-default-tab");
-    try {
-      const params = new URLSearchParams(window.location.search);
-      const qs = (params.get('auth') || '').toLowerCase();
-      if (qs === 'register' || qs === 'registro' || qs === 'signup') defaultTab = 'registerTab';
-      if (qs === 'login' || qs === 'ingreso') defaultTab = 'loginTab';
-    } catch (_) {}
-    if (defaultTab) {
-      const trigger = authModal.querySelector(`[data-bs-target="#${defaultTab}"]`);
-      if (trigger) {
-        const tab = new bootstrap.Tab(trigger);
-        tab.show();
+(() => {
+  // Fondo de estrellas
+  const canvas = document.getElementById("stars");
+  if (canvas) {
+    const ctx = canvas.getContext("2d");
+    let W = 0, H = 0, stars = [];
+
+    const resize = () => {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    };
+
+    const createStars = (count = 180) => {
+      stars = Array.from({ length: count }).map(() => ({
+        x: Math.random() * W,
+        y: Math.random() * H,
+        r: Math.random() * 1.2 + 0.2,
+        a: Math.random() * 1,
+      }));
+    };
+
+    const draw = () => {
+      ctx.clearRect(0, 0, W, H);
+      for (const s of stars) {
+        ctx.globalAlpha = s.a;
+        ctx.beginPath();
+        ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        s.a += (Math.random() - 0.5) * 0.03;
+        if (s.a < 0.2) s.a = 0.2;
+        if (s.a > 1) s.a = 1;
       }
-      const modal = new bootstrap.Modal(authModal);
-      modal.show();
-    }
+      requestAnimationFrame(draw);
+    };
+
+    window.addEventListener("resize", () => {
+      resize();
+      createStars();
+    });
+    resize();
+    createStars();
+    draw();
   }
 
-  const quantityInputs = document.querySelectorAll("[data-quantity-max]");
-  quantityInputs.forEach(input => {
-    input.addEventListener("input", () => {
-      const max = parseInt(input.dataset.quantityMax, 10);
-      let value = parseInt(input.value, 10);
-      if (Number.isNaN(value) || value < 1) {
-        value = 1;
+  // Año dinámico
+  const yearEl = document.getElementById("year");
+  if (yearEl) yearEl.textContent = new Date().getFullYear();
+
+  // Nav toggle
+  const navToggle = document.querySelector(".nav-toggle");
+  const navGroup = document.getElementById("navGroup");
+  if (navToggle && navGroup) {
+    navToggle.addEventListener("click", () => {
+      navGroup.classList.toggle("show");
+    });
+  }
+
+  // Tema claro/oscuro
+  const themeBtn = document.getElementById("themeToggle");
+  if (themeBtn) {
+    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const storedTheme = localStorage.getItem("theme");
+    if (storedTheme === "light" || (!prefersDark && !storedTheme)) {
+      document.body.classList.add("light");
+    }
+    themeBtn.addEventListener("click", () => {
+      document.body.classList.toggle("light");
+      localStorage.setItem("theme", document.body.classList.contains("light") ? "light" : "dark");
+    });
+  }
+
+  // Chips de categorías
+  const chips = document.querySelectorAll("[data-category-chip]");
+  const categoriaSelect = document.getElementById("categoriaSelect");
+  const filterForm = document.getElementById("catalogFilters");
+  chips.forEach((chip) => {
+    chip.addEventListener("click", () => {
+      chips.forEach((c) => c.classList.remove("active"));
+      chip.classList.add("active");
+      if (categoriaSelect) {
+        categoriaSelect.value = chip.value || "";
       }
-      if (!Number.isNaN(max) && max > 0 && value > max) {
-        value = max;
+      if (filterForm && typeof filterForm.requestSubmit === "function") {
+        filterForm.requestSubmit();
+      } else if (filterForm) {
+        filterForm.submit();
       }
-      input.value = value;
     });
   });
 
-  const clearFiltersBtn = document.getElementById("clearFilters");
-  if (clearFiltersBtn) {
-    clearFiltersBtn.addEventListener("click", () => {
-      window.location.href = window.location.pathname;
-    });
-  }
-
-  const authTriggers = document.querySelectorAll(".require-auth");
-  if (authTriggers.length) {
-    authTriggers.forEach(trigger => {
-      trigger.addEventListener("click", event => {
-        event.preventDefault();
-        if (window.__authNoticeActive) {
-          return;
-        }
-        const redirect = trigger.dataset.loginUrl || trigger.getAttribute("href") || "/accounts/login/";
-        const message = trigger.dataset.message || "Necesitas iniciar sesion para continuar.";
-        showAuthNotice(message, redirect);
+  // Auth tabs
+  const authTabs = document.querySelectorAll(".auth-tab");
+  const authForms = document.querySelectorAll(".auth-form");
+  authTabs.forEach((tab) => {
+    tab.addEventListener("click", () => {
+      const target = tab.dataset.authTarget;
+      authTabs.forEach((t) => t.classList.remove("active"));
+      tab.classList.add("active");
+      authForms.forEach((form) => {
+        form.classList.toggle("show", form.dataset.authPanel === target);
       });
     });
-  }
-
-});
-
-let authNoticeHandle = null;
-let authNoticeInterval = null;
-function showAuthNotice(message, redirectUrl) {
-  if (window.__authNoticeActive) {
-    return;
-  }
-  window.__authNoticeActive = true;
-  if (!redirectUrl) {
-    redirectUrl = "/accounts/login/";
-  }
-
-  if (window.__authNoticeElement) {
-    window.__authNoticeElement.remove();
-  }
-  if (authNoticeHandle) {
-    clearTimeout(authNoticeHandle);
-    authNoticeHandle = null;
-  }
-  if (authNoticeInterval) {
-    clearInterval(authNoticeInterval);
-    authNoticeInterval = null;
-  }
-
-  const container = document.createElement("div");
-  container.className = "auth-notice";
-  container.innerHTML = `
-    <i class="fa fa-bell"></i>
-    <div class="auth-notice__body">
-      <strong>Acceso requerido</strong>
-      <span>${message}</span>
-      <div class="auth-notice__timer">Redirigiendo en <span data-countdown>2</span>s...</div>
-    </div>
-  `;
-  document.body.appendChild(container);
-  window.__authNoticeElement = container;
-  requestAnimationFrame(() => {
-    container.classList.add("is-visible");
   });
 
-  let remaining = 2;
-  const countdownElement = container.querySelector("[data-countdown]");
-  authNoticeInterval = setInterval(() => {
-    remaining -= 1;
-    if (remaining <= 0) {
-      remaining = 0;
-      clearInterval(authNoticeInterval);
-      authNoticeInterval = null;
-    }
-    if (countdownElement) {
-      countdownElement.textContent = remaining.toString();
-    }
-  }, 1000);
+  // Navegación por secciones
+  const sectionLinks = document.querySelectorAll(".nav-links a[data-nav-target]");
+  const sections = document.querySelectorAll("[data-section]");
 
-  authNoticeHandle = setTimeout(() => {
-    if (container) {
-      container.classList.add("is-hiding");
+  const activateSection = (name) => {
+    if (!name) return;
+    let found = false;
+    sections.forEach((section) => {
+      const match = section.dataset.section === name;
+      section.classList.toggle("is-active", match);
+      if (match) found = true;
+    });
+    if (!found) return;
+    sectionLinks.forEach((link) => {
+      link.classList.toggle("active", link.dataset.navTarget === name);
+    });
+    if (navGroup) navGroup.classList.remove("show");
+    const hash = `#${name}`;
+    if (window.location.hash !== hash) {
+      history.replaceState(null, "", hash);
     }
-  }, 1600);
+  };
 
-  setTimeout(() => {
-    window.location.href = redirectUrl;
-  }, 2100);
-}
+  sectionLinks.forEach((link) => {
+    link.addEventListener("click", (event) => {
+      event.preventDefault();
+      activateSection(link.dataset.navTarget);
+    });
+  });
 
+  const initialHash = window.location.hash.replace("#", "") || (sections[0] && sections[0].dataset.section);
+  activateSection(initialHash);
+})();

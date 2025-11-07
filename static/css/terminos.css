@@ -1,0 +1,8 @@
+body { margin:0; background:radial-gradient(circle at 10% 0%, #0a1026 0%, #050815 100%);
+  color:#e7ecf5; font-family:'Poppins',sans-serif; overflow-x:hidden;}
+canvas{position:fixed;inset:0;z-index:-1;}
+.glass{backdrop-filter:blur(10px);background:rgba(255,255,255,.05);border-radius:16px;
+  border:1px solid rgba(255,255,255,.1);max-width:900px;margin:60px auto;padding:50px 40px;}
+h1{color:#E94560;text-align:center;margin-bottom:30px;}
+h2{color:#62B3FF;margin-top:25px;}
+.final{text-align:center;margin-top:40px;color:#9fb0c9;font-size:.9rem;}

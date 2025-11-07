@@ -1,4 +1,7 @@
-﻿# EpicAnimes/urls.py
+"""
+URL configuration for EpicAnimes
+"""
+
 from django.contrib import admin
 from django.urls import path, include
 from django.views.generic import RedirectView
@@ -6,8 +9,8 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 from core.views import (
-    # PÃ¡ginas
-    VistaIndex, VistaSobreNosotros, VistaContacto,
+    # Páginas
+    VistaIndex, VistaSobreNosotros, VistaTerminos, VistaContacto,
     VistaAdministrador, VistaVendedor,
     VistaRegistro, VistaCarrito, VistaProductoDetalle,
     agregar_al_carrito, actualizar_carrito,
@@ -16,19 +19,18 @@ from core.views import (
     newsletter_suscribir,
     api_chatbot_ask,
 
-    # RedirecciÃ³n inteligente post-login
+    # Redirección inteligente post-login
     redireccion_usuario,
     CoreLoginView,
     send_login_otp,
 
     # APIs VENDEDOR
     api_vendedor_resumen,
-    # extensión con rango dinámico
     api_vendedor_resumen_ext,
     api_vendedor_stock_resumen,
     api_vendedor_producto_detalle,
 
-    # APIs ADMIN (grÃ¡ficos/stock/CRUD)
+    # APIs ADMIN (gráficos/stock/CRUD)
     api_admin_ventas_por_vendedor,
     api_admin_clientes_actividad,
     api_admin_vendedores_estado,
@@ -70,6 +72,7 @@ urlpatterns = [
     # Páginas públicas
     path('index/', VistaIndex, name='index'),
     path('sobrenosotros/', VistaSobreNosotros, name='sobre_nosotros'),
+    path('terminos/', VistaTerminos, name='terminos'),
     path('contacto/', VistaContacto, name='contacto'),
     path('producto/<int:producto_id>/', VistaProductoDetalle, name='producto_detalle'),
     path('carrito/', VistaCarrito, name='carrito'),
@@ -96,7 +99,7 @@ urlpatterns = [
     path('api/vendedor/export/ventas.csv', export_vendedor_ventas_csv, name='export_vendedor_ventas_csv'),
     path('api/vendedor/export/ventas.xlsx', export_vendedor_ventas_xlsx, name='export_vendedor_ventas_xlsx'),
     path('api/vendedor/producto/<int:pk>/', api_vendedor_producto_detalle, name='api_vendedor_producto_detalle'),
-    
+
     # ===================== APIs ADMIN ========================
     # Gráficos
     path('api/admin/ventas-por-vendedor/', api_admin_ventas_por_vendedor, name='api_admin_ventas_por_vendedor'),
@@ -118,7 +121,7 @@ urlpatterns = [
     path('api/admin/producto/<int:pk>/detalle/', api_admin_producto_detalle, name='api_admin_producto_detalle'),
     path('api/admin/producto/<int:pk>/edit/', api_admin_producto_update_full, name='api_admin_producto_update_full'),
     path('api/admin/producto/<int:pk>/delete/', api_admin_producto_delete, name='api_admin_producto_delete'),
-    path('api/vendedor/producto/<int:pk>/delete/', api_vendedor_producto_delete, name='api_vendedor_producto_delete'),
+    path('api/vendedor/producto/<int:pk>/', api_vendedor_producto_delete, name='api_vendedor_producto_delete'),
 
     # CRUD vendedores
     path('api/admin/vendedores/', api_admin_vendedores, name='api_admin_vendedores'),
@@ -127,18 +130,11 @@ urlpatterns = [
     path('api/vendedor/importar/', api_vendedor_importar, name='api_vendedor_importar'),
     path('api/vendedor/importar_excel/', api_vendedor_importar_excel, name='api_vendedor_importar_excel'),
 
-    # Índex
+    # Index
     path('', RedirectView.as_view(pattern_name='index', permanent=False)),
 ]
 
-# Servir archivos de MEDIA en desarrollo (imÃ¡genes subidas, etc.)
+# Servir archivos de MEDIA en desarrollo (imágenes subidas, etc.)
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
-
-
-
-
-
-
 

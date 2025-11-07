@@ -1,0 +1,72 @@
+<section id="inicio" class="hero is-active" data-section="inicio">
+  <div class="hero__content">
+    <p class="pill">Marketplace conectado • Tiempo real</p>
+    <h1>Tu mundo del <span class="gradient"> anime</span> que tanto buscabas</h1>
+    <p class="subtitle">
+      Compra o publica coleccionables con inventario sincronizado, filtros inteligentes y el mismo flujo que usan
+      nuestros dashboards de vendedores.
+    </p>
+    <div class="cta">
+      <a href="#catalogo" class="btn btn--primary">
+        <i class="fa fa-store"></i> Explorar catálogo
+      </a>
+      {% if request.user.is_authenticated %}
+        {% if rol_usuario == "administrador" %}
+          <a href="{% url 'dashboard_administrador' %}" class="btn btn--ghost">
+            <i class="fa fa-gauge-high"></i> Ir al panel
+          </a>
+        {% elif rol_usuario == "vendedor" %}
+          <a href="{% url 'dashboard_vendedor' %}" class="btn btn--ghost">
+            <i class="fa fa-gauge-high"></i> Ir al panel
+          </a>
+        {% else %}
+          <a href="{% url 'carrito' %}" class="btn btn--ghost">
+            <i class="fa fa-cart-shopping"></i> Revisar carrito
+          </a>
+        {% endif %}
+      {% else %}
+        <a href="{% url 'login' %}" class="btn btn--ghost">
+          <i class="fa fa-user-plus"></i> Ingresar
+        </a>
+      {% endif %}
+    </div>
+    <div class="trust">
+      <span><i class="fa fa-shield-halved"></i> TLS 1.3 / OWASP</span>
+      <span><i class="fa fa-robot"></i> Chatbot IA conectado</span>
+      <span><i class="fa fa-chart-column"></i> Dashboard vendedor</span>
+      <span><i class="fa fa-boxes-stacked"></i> {{ productos|length }} productos activos</span>
+    </div>
+  </div>
+  <div class="hero__card glass" aria-live="polite">
+    <div class="card__header">
+      <span class="tag">Destacados</span>
+      <span class="title">Últimos ingresos</span>
+    </div>
+    <div class="card__grid">
+      {% for producto in productos|slice:":3" %}
+        <div class="item">
+          <img src="{{ producto.imagen_url }}" alt="{{ producto.nombre }}">
+          <div class="item__meta">
+            <strong>{{ producto.nombre|truncatechars:22 }}</strong>
+            <small>
+              {{ producto.categoria|default:"Sin categoría" }} ·
+              ${{ producto.precio|floatformat:0 }}
+            </small>
+          </div>
+        </div>
+      {% empty %}
+        <div class="item item--empty">
+          <p>Añade tus primeros productos desde el dashboard para poblar esta vitrina.</p>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="card__footer">
+      <a class="btn btn--primary small" href="#catalogo">
+        <i class="fa fa-bolt"></i> Ver catálogo
+      </a>
+      <a class="btn btn--ghost small" href="{% url 'sobre_nosotros' %}">
+        <i class="fa fa-circle-info"></i> Conocer más
+      </a>
+    </div>
+  </div>
+</section>

@@ -590,9 +590,12 @@ def VistaIndex(request):
 
 
     filtro_busqueda = (request.GET.get("q") or "").strip()
-
     filtro_categoria = (request.GET.get("categoria") or "").strip()
-
+    filtro_marca = (request.GET.get("marca") or "").strip()
+    filtro_calidad = (request.GET.get("calidad") or "").strip()
+    filtro_precio_min_raw = (request.GET.get("precio_min") or "").strip()
+    filtro_precio_max_raw = (request.GET.get("precio_max") or "").strip()
+    filtro_en_stock = (request.GET.get("en_stock") or "").strip()
     filtro_orden = (request.GET.get("orden") or "recientes").strip()
 
 
@@ -600,8 +603,24 @@ def VistaIndex(request):
     productos_qs = Producto.objects.select_related("vendedor", "vendedor__usuario")
 
     if filtro_categoria and filtro_categoria.lower() != "todos":
-
         productos_qs = productos_qs.filter(categoria__iexact=filtro_categoria)
+    if filtro_marca and filtro_marca.lower() != "todas":
+        productos_qs = productos_qs.filter(marca__iexact=filtro_marca)
+    if filtro_calidad and filtro_calidad.lower() != "todas":
+        productos_qs = productos_qs.filter(calidad__iexact=filtro_calidad)
+    # Rango de precio (manejar valores inválidos de forma segura)
+    try:
+        if filtro_precio_min_raw:
+            productos_qs = productos_qs.filter(precio__gte=Decimal(filtro_precio_min_raw))
+    except (InvalidOperation, ValueError):
+        pass
+    try:
+        if filtro_precio_max_raw:
+            productos_qs = productos_qs.filter(precio__lte=Decimal(filtro_precio_max_raw))
+    except (InvalidOperation, ValueError):
+        pass
+    if filtro_en_stock in ("1", "on", "true", "True"):
+        productos_qs = productos_qs.filter(existencias__gt=0)
 
 
 
@@ -658,24 +677,53 @@ def VistaIndex(request):
 
 
     default_image_url = static("images/Imagen1.png")
-
+    now_date = timezone.now().date()
     for prod in productos:
-
         prod.imagen_url = prod.imagen.url if getattr(prod, "imagen", None) else default_image_url
+        try:
+            prod.is_new = (now_date - (prod.fecha_ingreso or now_date)).days <= 14
+        except Exception:
+            prod.is_new = False
 
     categorias = (
-
         Producto.objects.exclude(categoria__isnull=True)
-
         .exclude(categoria__exact="")
-
         .order_by("categoria")
-
         .values_list("categoria", flat=True)
-
         .distinct()
-
     )
+    marcas = (
+        Producto.objects.exclude(marca__isnull=True)
+        .exclude(marca__exact="")
+        .order_by("marca")
+        .values_list("marca", flat=True)
+        .distinct()
+    )
+    calidades = (
+        Producto.objects.exclude(calidad__isnull=True)
+        .exclude(calidad__exact="")
+        .order_by("calidad")
+        .values_list("calidad", flat=True)
+        .distinct()
+    )
+
+    # Sugerencias de búsqueda: categorías, marcas y algunos productos recientes
+    sugerencias_busqueda = []
+    try:
+        sugerencias_busqueda.extend(list(categorias[:8]))
+    except Exception:
+        pass
+    try:
+        sugerencias_busqueda.extend(list(marcas[:8]))
+    except Exception:
+        pass
+    try:
+        nombres_recientes = list(
+            Producto.objects.order_by("-fecha_ingreso").values_list("nombre", flat=True)[:10]
+        )
+        sugerencias_busqueda.extend(nombres_recientes)
+    except Exception:
+        pass
 
 
 
@@ -754,8 +802,9 @@ def VistaIndex(request):
     contexto = {
 
         "productos": productos,
-
         "categorias": categorias,
+        "marcas": marcas,
+        "calidades": calidades,
 
         "rol_usuario": rol_usuario,
 
@@ -766,9 +815,12 @@ def VistaIndex(request):
         "filtros": {
 
             "q": filtro_busqueda,
-
             "categoria": filtro_categoria,
-
+            "marca": filtro_marca,
+            "calidad": filtro_calidad,
+            "precio_min": filtro_precio_min_raw,
+            "precio_max": filtro_precio_max_raw,
+            "en_stock": filtro_en_stock in ("1", "on", "true", "True"),
             "orden": filtro_orden,
 
         },
@@ -776,6 +828,8 @@ def VistaIndex(request):
         "cart_count": cart_count,
 
         "puede_comprar": rol_usuario == "comprador",
+
+        "sugerencias_busqueda": sugerencias_busqueda,
 
     }
 
@@ -1904,221 +1958,15 @@ def carrito_gracias(request):
 
 # ============================================================
 
-
-
-@require_http_methods(["GET", "POST"])
-
-def VistaIndex(request):
-
-    rol_usuario = obtener_rol_usuario(request.user)
-
-
-
-    cart = _get_cart(request)
-
-    cart_count = _cart_count(cart)
-
-
-
-    filtro_busqueda = (request.GET.get("q") or "").strip()
-
-    filtro_categoria = (request.GET.get("categoria") or "").strip()
-
-    filtro_orden = (request.GET.get("orden") or "recientes").strip()
-
-
-
-    productos_qs = Producto.objects.select_related("vendedor", "vendedor__usuario")
-
-    if filtro_categoria and filtro_categoria.lower() != "todos":
-
-        productos_qs = productos_qs.filter(categoria__iexact=filtro_categoria)
-
-
-
-    productos_qs = productos_qs.order_by("-fecha_ingreso", "nombre")
-
-    productos = list(productos_qs)
-
-
-
-    if filtro_busqueda:
-
-        query_full_norm, query_tokens = _smart_tokenize(filtro_busqueda)
-
-        filtrados = []
-
-        for prod in productos:
-
-            coincide, score = _smart_match_score(prod, query_tokens, query_full_norm)
-
-            if coincide:
-
-                prod._search_score = score
-
-                filtrados.append(prod)
-
-        productos = filtrados
-
-    else:
-
-        for prod in productos:
-
-            prod._search_score = 1.0
-
-
-
-    if filtro_orden == "precio_asc":
-
-        productos.sort(key=lambda p: float(p.precio or 0))
-
-    elif filtro_orden == "precio_desc":
-
-        productos.sort(key=lambda p: float(p.precio or 0), reverse=True)
-
-    elif filtro_orden == "stock":
-
-        productos.sort(key=lambda p: p.existencias or 0, reverse=True)
-
-    else:
-
-        if filtro_busqueda:
-
-            productos.sort(key=lambda p: getattr(p, "_search_score", 0), reverse=True)
-
-
-
-    default_image_url = static("images/Imagen1.png")
-
-    for prod in productos:
-
-        prod.imagen_url = prod.imagen.url if getattr(prod, "imagen", None) else default_image_url
-
-    categorias = (
-
-        Producto.objects.exclude(categoria__isnull=True)
-
-        .exclude(categoria__exact="")
-
-        .order_by("categoria")
-
-        .values_list("categoria", flat=True)
-
-        .distinct()
-
-    )
-
-
-
-    login_form = LoginForm(request)
-
-    registro_form = RegistroClienteForm()
-
-
-
-    if request.method == "POST":
-
-        action = request.POST.get("form_type")
-
-        if action == "login":
-
-            login_form = LoginForm(request, data=request.POST)
-
-            if login_form.is_valid():
-
-                user = login_form.get_user()
-
-                auth_login(request, user)
-
-                destino = request.POST.get("next") or ""
-
-                if not destino:
-
-                    rol_destino = obtener_rol_usuario(user)
-
-                    if rol_destino == "administrador":
-
-                        destino = reverse("dashboard_administrador")
-
-                    elif rol_destino == "vendedor":
-
-                        destino = reverse("dashboard_vendedor")
-
-                    else:
-
-                        destino = reverse("index")
-
-                messages.success(request, "Sesión iniciada correctamente.")
-
-                return redirect(destino)
-
-            messages.error(request, "No pudimos iniciar la sesión. Revisa tus datos.")
-
-        elif action == "register":
-
-            registro_form = RegistroClienteForm(request.POST)
-
-            if registro_form.is_valid():
-
-                with transaction.atomic():
-
-                    user = registro_form.save()
-
-                    grupo_clientes, _ = Group.objects.get_or_create(name="Clientes")
-
-                    user.groups.add(grupo_clientes)
-
-                auth_login(request, user)
-
-                messages.success(request, "Cuenta creada. Ya puedes comprar.")
-
-                return redirect("index")
-
-            messages.error(request, "Revisa los datos del formulario de registro.")
-
-        else:
-
-            messages.error(request, "Acción no reconocida.")
-
-
-
-    contexto = {
-
-        "productos": productos,
-
-        "categorias": categorias,
-
-        "rol_usuario": rol_usuario,
-
-        "login_form": login_form,
-
-        "registro_form": registro_form,
-
-        "filtros": {
-
-            "q": filtro_busqueda,
-
-            "categoria": filtro_categoria,
-
-            "orden": filtro_orden,
-
-        },
-
-        "cart_count": cart_count,
-
-        "puede_comprar": rol_usuario == "comprador",
-
-    }
-
-    return render(request, "index.html", contexto)
-
-
-
-
-
 def VistaSobreNosotros(request):
 
     return render(request, "sobrenosotros.html")
+
+
+
+def VistaTerminos(request):
+
+    return render(request, "terminos.html")
 
 
 

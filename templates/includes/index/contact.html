@@ -1,0 +1,43 @@
+<section id="contacto" class="section" data-section="contacto">
+  <div class="contact glass">
+    <div>
+      <h3>¿Listo para comprar?</h3>
+      <p>Elige cómo quieres unirte a EpicAnimes y nos encargamos del resto.</p>
+    </div>
+    <div class="signup-grid">
+      <form class="signup-card" method="post" action="{% url 'newsletter_suscribir' %}">
+        {% csrf_token %}
+        <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <input type="hidden" name="segmento" value="comprador">
+        <span class="pill">Compradores</span>
+        <p class="muted text-small">
+          Recibe lanzamientos exclusivos, cupones y alertas de stock directamente en tu correo.
+        </p>
+        <label>
+          <span>Correo electrónico</span>
+          <input type="email" name="newsletter_email" placeholder="tu@correo.com" required>
+        </label>
+        <button class="btn btn--primary" type="submit">
+          <i class="fa fa-user-plus"></i> Quiero comprar
+        </button>
+        <small class="muted text-small">
+          ¿Prefieres crear la cuenta completa? <a href="{% url 'signup' %}">Hazlo aquí</a>.
+        </small>
+      </form>
+
+      <div class="signup-card">
+        <span class="pill">Vendedores</span>
+        <p class="muted text-small">
+          Completa la postulación oficial para que tu tienda aparezca en EpicAnimes.
+          Guardamos los datos en la base y los verás en el dashboard administrador (Nombre, Email, Teléfono, Tienda, Instagram / Web).
+        </p>
+        <a class="btn btn--ghost" href="{% url 'contacto' %}#postulacion">
+          <i class="fa fa-store"></i> Ir a la postulación
+        </a>
+        <small class="muted text-small">
+          La solicitud se revisa manualmente y queda disponible en el panel de postulaciones para el equipo.
+        </small>
+      </div>
+    </div>
+  </div>
+</section>

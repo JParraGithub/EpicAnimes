@@ -1,0 +1,150 @@
+<section id="catalogo" class="section alt" data-section="catalogo">
+  <div class="section__header catalog-header">
+    <div>
+      <h2 class="section__title">Catálogo conectado</h2>
+      <p class="section__desc">
+        Los filtros consultan directamente los productos guardados en la base de datos. Explora por franquicia, marca, calidad o stock.
+      </p>
+    </div>
+    <div class="chip-row" role="tablist" aria-label="Categorías populares">
+      {% with filtros.categoria as categoria_actual %}
+        <button type="button" class="chip {% if not categoria_actual or categoria_actual|lower == 'todos' %}active{% endif %}" data-category-chip value="">
+          Todo
+        </button>
+        {% for categoria in categorias|slice:":6" %}
+          <button type="button" class="chip {% if categoria == categoria_actual %}active{% endif %}" data-category-chip value="{{ categoria }}">
+            {{ categoria|default:"Sin categoría" }}
+          </button>
+        {% endfor %}
+      {% endwith %}
+    </div>
+  </div>
+
+  <form id="catalogFilters" class="filters glass" method="get" action="">
+    <div class="filter-grid">
+      <label>
+        <span>Búsqueda</span>
+        <input type="search"
+               name="q"
+               value="{{ filtros.q }}"
+               placeholder="Nombre, franquicia, marca..."
+               list="sugerenciasBusqueda">
+      </label>
+      <label>
+        <span>Categoría</span>
+        <select name="categoria" id="categoriaSelect">
+          <option value="">Todas</option>
+          {% for categoria in categorias %}
+            <option value="{{ categoria }}" {% if categoria == filtros.categoria %}selected{% endif %}>
+              {{ categoria|default:"Sin categoría" }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>Marca</span>
+        <select name="marca">
+          <option value="">Todas</option>
+          {% for marca in marcas %}
+            <option value="{{ marca }}" {% if marca == filtros.marca %}selected{% endif %}>
+              {{ marca }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>Calidad</span>
+        <select name="calidad">
+          <option value="">Todas</option>
+          {% for calidad in calidades %}
+            <option value="{{ calidad }}" {% if calidad == filtros.calidad %}selected{% endif %}>
+              {{ calidad }}
+            </option>
+          {% endfor %}
+        </select>
+      </label>
+      <label>
+        <span>Precio desde</span>
+        <input type="number" name="precio_min" min="0" step="500" value="{{ filtros.precio_min }}" placeholder="$0">
+      </label>
+      <label>
+        <span>Precio hasta</span>
+        <input type="number" name="precio_max" min="0" step="500" value="{{ filtros.precio_max }}" placeholder="$50.000">
+      </label>
+      <label class="checkbox-field">
+        <input type="checkbox" name="en_stock" value="1" {% if filtros.en_stock %}checked{% endif %}>
+        <span>Solo en stock</span>
+      </label>
+      <label>
+        <span>Ordenar por</span>
+        <select name="orden">
+          <option value="recientes" {% if filtros.orden == "recientes" %}selected{% endif %}>Más recientes</option>
+          <option value="precio_asc" {% if filtros.orden == "precio_asc" %}selected{% endif %}>Precio menor</option>
+          <option value="precio_desc" {% if filtros.orden == "precio_desc" %}selected{% endif %}>Precio mayor</option>
+          <option value="stock" {% if filtros.orden == "stock" %}selected{% endif %}>Stock disponible</option>
+        </select>
+      </label>
+    </div>
+    <div class="filters__actions">
+      <button type="submit" class="btn btn--primary">
+        <i class="fa fa-filter"></i> Aplicar filtros
+      </button>
+      <a href="{% url 'index' %}" class="btn btn--ghost">
+        <i class="fa fa-rotate-left"></i> Limpiar
+      </a>
+    </div>
+  </form>
+
+  <div class="grid">
+    {% for producto in productos %}
+      <article class="card product" data-cat="{{ producto.categoria|default:''|slugify }}" data-marca="{{ producto.marca|default:''|slugify }}">
+        <div class="product__thumb">
+          <img src="{{ producto.imagen_url }}" alt="{{ producto.nombre }}">
+          {% if producto.is_new %}
+            <span class="pill pill--accent">Nuevo</span>
+          {% endif %}
+        </div>
+        <div class="p-content">
+          <h3>{{ producto.nombre }}</h3>
+          <p class="muted">
+            {{ producto.marca|default:"Marca sin especificar" }} · {{ producto.categoria|default:"Sin categoría" }}
+          </p>
+          <p class="price">${{ producto.precio|floatformat:0 }}</p>
+          <p class="muted text-small">
+            Stock: {{ producto.existencias }} · Calidad: {{ producto.calidad|default:"N/A" }}
+          </p>
+        </div>
+        <div class="product__actions">
+          <a class="btn btn--ghost small" href="{% url 'producto_detalle' producto.id %}">
+            <i class="fa fa-eye"></i> Ver detalle
+          </a>
+          {% if request.user.is_authenticated and puede_comprar %}
+            <form method="post" action="{% url 'carrito_agregar' producto.id %}">
+              {% csrf_token %}
+              <input type="hidden" name="cantidad" value="1">
+              <button class="btn btn--primary small" {% if producto.existencias <= 0 %}disabled{% endif %}>
+                <i class="fa fa-cart-plus"></i> Añadir
+              </button>
+            </form>
+          {% else %}
+            <a class="btn btn--primary small" href="{% url 'login' %}">
+              <i class="fa fa-lock"></i> Inicia sesión
+            </a>
+          {% endif %}
+        </div>
+      </article>
+    {% empty %}
+      <div class="empty-state glass">
+        <i class="fa fa-magnifying-glass"></i>
+        <p>No encontramos productos con los filtros seleccionados.</p>
+        <a class="btn btn--ghost" href="{% url 'index' %}">Quitar filtros</a>
+      </div>
+    {% endfor %}
+  </div>
+
+  <datalist id="sugerenciasBusqueda">
+    {% for sugerencia in sugerencias_busqueda %}
+      <option value="{{ sugerencia }}"></option>
+    {% endfor %}
+  </datalist>
+</section>

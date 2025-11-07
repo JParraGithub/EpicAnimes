@@ -1,0 +1,33 @@
+<section id="kpi" class="section" data-section="kpi">
+  <div class="kpi-wrap">
+    <article class="kpi glass">
+      <span class="kpi__label">Productos publicados</span>
+      <span class="kpi__value">{{ productos|length }}</span>
+      <small class="muted">Datos directos de la BD</small>
+    </article>
+    <article class="kpi glass">
+      <span class="kpi__label">Categorías activas</span>
+      <span class="kpi__value">{{ categorias|length }}</span>
+      <small class="muted">Agrupadas por filtros</small>
+    </article>
+    <article class="kpi glass">
+      <span class="kpi__label">Marcas registradas</span>
+      <span class="kpi__value">{{ marcas|length }}</span>
+      <small class="muted">Valores únicos en inventario</small>
+    </article>
+    <article class="kpi glass">
+      <span class="kpi__label">Rol actual</span>
+      <span class="kpi__value">
+        {% if rol_usuario %}
+          {{ rol_usuario|title }}
+        {% else %}
+          Invitado
+        {% endif %}
+      </span>
+      <small class="muted">Determina permisos en el sitio</small>
+    </article>
+  </div>
+  <p class="kpi-note">
+    Estos indicadores comparten la misma fuente de datos que los dashboards de administración, garantizando consistencia entre front y backend.
+  </p>
+</section>
