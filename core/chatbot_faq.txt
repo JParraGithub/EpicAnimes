@@ -1,8 +1,8 @@
 Pregunta: ¿Cuál es el horario de atención?
-Respuesta: Atendemos en línea todos los días de 09:00 a 21:00 hrs. Si escribes fuera de ese horario te responderemos lo antes posible al siguiente día hábil.
+Respuesta: Atendemos en línea todos los días de 09:00 a 21:00 hrs. Si escribes fuera de ese horario te responderemos apenas abramos al siguiente día hábil.
 
 Pregunta: ¿Cuánto tarda el envío?
-Respuesta: Los envíos a Santiago demoran entre 24 y 48 horas hábiles y a regiones entre 3 y 5 días hábiles. Te compartiremos el número de seguimiento por correo.
+Respuesta: Los envíos a Santiago demoran entre 24 y 48 horas hábiles y a regiones entre 3 y 5 días. Te enviaremos el número de seguimiento apenas salga tu pedido.
 
 Pregunta: ¿Qué opciones de pago aceptan?
 Respuesta: Puedes pagar con PayPal, tarjetas de crédito y débito internacionales o transferencia bancaria nacional. Escríbenos si necesitas otra alternativa.
@@ -10,11 +10,11 @@ Respuesta: Puedes pagar con PayPal, tarjetas de crédito y débito internacional
 Pregunta: ¿Puedo retirar en tienda?
 Respuesta: Por ahora solo realizamos ventas online con despacho. Estamos trabajando para habilitar un punto de retiro, lo anunciaremos en nuestras redes.
 
-Pregunta: ¿Cómo seguimiento mi pedido?
+Pregunta: ¿Cómo doy seguimiento a mi pedido?
 Respuesta: Revisa el correo de confirmación, ahí encontrarás el link de seguimiento. Si no lo recibiste contáctanos indicando tu número de orden para reenviártelo.
 
 Pregunta: ¿Qué hago si mi producto llegó dañado?
-Respuesta: Lamentamos el inconveniente. Escríbenos dentro de los primeros 5 días con fotos del daño y el número de orden, coordinaremos el cambio o reembolso.
+Respuesta: Lamentamos el inconveniente. Escríbenos dentro de los primeros 5 días con fotos del daño y el número de orden; coordinaremos el cambio o reembolso.
 
 Pregunta: ¿Realizan envíos internacionales?
 Respuesta: Sí, enviamos a la mayoría de los países de Latinoamérica con DHL. Los costos pueden variar, consúltanos indicando tu ciudad para cotizar con precisión.
@@ -22,3 +22,14 @@ Respuesta: Sí, enviamos a la mayoría de los países de Latinoamérica con DHL.
 Pregunta: ¿Ofrecen preventas?
 Respuesta: Sí, abrimos preventas con cupos limitados. Revisa la sección de novedades o suscríbete a nuestro newsletter para enterarte antes que todos.
 
+Pregunta: ¿Cómo puedo postular como vendedor?
+Respuesta: Completa el formulario de contacto en la sección Postula como vendedor, cuéntanos sobre tu catálogo y responderemos en máximo 48 horas hábiles.
+
+Pregunta: ¿Los productos son originales?
+Respuesta: Todos nuestros productos provienen de distribuidores oficiales. Trabajamos con controles de autenticidad y facturas para garantizar compras seguras.
+
+Pregunta: ¿Puedo solicitar una factura?
+Respuesta: Sí, indícanos tus datos tributarios al momento de comprar o escríbenos a soporte@epicanimes.cl y enviaremos la factura electrónica correspondiente.
+
+Pregunta: ¿Qué pasa si un artículo aparece agotado?
+Respuesta: Puedes activar la alerta en la ficha del producto o escribirnos. Te avisaremos cuando vuelva a estar disponible o si tendremos una reposición cercana.

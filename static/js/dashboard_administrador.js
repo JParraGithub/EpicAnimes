@@ -1,5 +1,8 @@
-// static/js/dashboard_administrador.js
+﻿// static/js/dashboard_administrador.js
 // Página principal para el panel del administrador (vendedores, usuarios, stock, postulaciones)
+
+window.__dashboardAdminEnhanced = true;
+window.__dashboardAdminEnhancedReady = false;
 
 document.addEventListener('DOMContentLoaded', () => {
   /* ----------------------- helpers ----------------------- */
@@ -111,6 +114,7 @@ document.addEventListener('DOMContentLoaded', () => {
   };
 
   const applyUsuariosRealtime = (onlineSet) => {
+    if (onlineSet instanceof Set) lastUsuariosOnlineSet = onlineSet;
     usrBody?.querySelectorAll('tr[data-id]')?.forEach((row) => {
       const badge = row.querySelector('.status-badge');
       if (!badge) return;
@@ -123,7 +127,7 @@ document.addEventListener('DOMContentLoaded', () => {
       badge.classList.toggle('suspended', disabled);
     });
     // refresca el gráfico de usuarios según el set
-    renderChartUserEstado(onlineSet);
+    updateUserEstadoChart(lastUsuariosRows, onlineSet);
   };
 
   const startUsuariosRealtime = (initialSet) => {
@@ -174,11 +178,18 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnExportVentas = document.getElementById('exportVentasExcel');
 
   const vendorEstadoChartBox = document.getElementById('vendorEstadoChartBox');
+  const vendorEstadoPlaceholder = document.getElementById('vendorEstadoPlaceholder');
+  const vendorEstadoLegend = document.getElementById('vendorEstadoLegend');
+  const vendorEstadoSummary = document.getElementById('vendorEstadoSummary');
   const vendorTopChartBox = document.getElementById('vendorTopChartBox');
   const vendorTopName = document.getElementById('vendorTopName');
   const vendorTopPlaceholder = document.getElementById('vendorTopPlaceholder');
   const chartVendEstadoCtx = document.getElementById('chartVendEstado')?.getContext('2d');
   const chartVendTopCtx = document.getElementById('chartVendTopProductos')?.getContext('2d');
+  const userEstadoChartBox = document.getElementById('userEstadoChartBox');
+  const userEstadoPlaceholder = document.getElementById('userEstadoPlaceholder');
+  const userEstadoLegend = document.getElementById('userEstadoLegend');
+  const userEstadoSummary = document.getElementById('userEstadoSummary');
   const ventasUsuariosRangeSel = document.getElementById('selectVentasUsuariosRangeInner');
   const ventasUsuariosTopSel = document.getElementById('selectVentasUsuariosTop');
   const ventasUsuariosPresenceBtn = document.getElementById('toggleVentasUsuariosPresence');
@@ -240,6 +251,7 @@ document.addEventListener('DOMContentLoaded', () => {
   let vendedoresRealtimeTimer = null;
 
   const applyVendedoresRealtime = (onlineSet) => {
+    if (onlineSet instanceof Set) lastVendedoresOnlineSet = onlineSet;
     vendBody?.querySelectorAll('tr[data-id]')?.forEach((row) => {
       const badge = row.querySelector('.status-badge');
       if (!badge) return;
@@ -251,6 +263,7 @@ document.addEventListener('DOMContentLoaded', () => {
       badge.classList.toggle('offline', !online || disabled);
       badge.classList.toggle('suspended', disabled);
     });
+    updateVendorEstadoChart(lastVendedoresRows, onlineSet);
   };
 
   const startVendedoresRealtime = (initialSet) => {
@@ -263,7 +276,7 @@ document.addEventListener('DOMContentLoaded', () => {
       try {
         const ids = await getUsuariosOnline();
         applyVendedoresRealtime(ids);
-        try { renderChartVendEstado3(lastVendedoresRows, ids); } catch(_) { }
+        try { updateVendorEstadoChart(lastVendedoresRows, ids); } catch(_) { }
       } catch (err) { console.error(err); }
     }, VENDEDORES_REALTIME_INTERVAL);
   };
@@ -274,6 +287,8 @@ document.addEventListener('DOMContentLoaded', () => {
 
   const modalEditar = document.getElementById('modalEditar');
   const modalAgregar = document.getElementById('modalAgregar');
+  const modalAgregarTitle = document.getElementById('modalAgregarTitle');
+  const modalAgregarError = document.getElementById('modalAgregarError');
   const editNombre = document.getElementById('editNombre');
   const editEmail = document.getElementById('editEmail');
   const editPass = document.getElementById('editPass');
@@ -337,19 +352,55 @@ document.addEventListener('DOMContentLoaded', () => {
     } catch (_) {}
   };
 
-  const showApiError = (err, fallback = 'Ocurrió un error') => {
+  const parseApiMessage = (err, fallback = 'Ocurrió un error') => {
     try {
       const raw = (err && (err.detail || err.message || err.toString())) || '';
       const parts = raw.split('\n');
       let body = (parts.length > 1 ? parts.slice(1).join('\n') : parts[0]).trim();
-      // si cuerpo es JSON con {error}
       if (body.startsWith('{')) {
-        try { const j = JSON.parse(body); body = (j.error || j.detail || body); } catch(_) {}
+        try {
+          const j = JSON.parse(body);
+          body = (j.error || j.detail || body);
+        } catch (_) {}
       }
-      showToast((body || fallback), 'error');
-    } catch(_) {
-      showToast(fallback, 'error');
+      return body || fallback;
+    } catch (_) {
+      return fallback;
     }
+  };
+
+  const showApiError = (err, fallback = 'Ocurrió un error') => {
+    const message = parseApiMessage(err, fallback);
+    showToast(message, 'error');
+    return message;
+  };
+
+  const updateKnownUsers = (list = []) => {
+    try {
+      list.forEach((user) => {
+        if (user && typeof user.id !== 'undefined') {
+          knownUsers.set(Number(user.id), user);
+        }
+      });
+    } catch (_) {}
+  };
+
+  const normalizeValue = (value) => (value || '').trim().toLowerCase();
+  const usernameExists = (value) => {
+    const target = normalizeValue(value);
+    if (!target) return false;
+    for (const user of knownUsers.values()) {
+      if (normalizeValue(user.username) === target) return true;
+    }
+    return false;
+  };
+  const emailExists = (value) => {
+    const target = normalizeValue(value);
+    if (!target) return false;
+    for (const user of knownUsers.values()) {
+      if (normalizeValue(user.email) === target && target) return true;
+    }
+    return false;
   };
 
   // Live checklist + match indicator for create modal
@@ -394,56 +445,252 @@ document.addEventListener('DOMContentLoaded', () => {
   let vendTopReq = 0;
   let chartUserEstado = null;
   let lastUsuariosRows = [];
+  let lastUsuariosOnlineSet = new Set();
   let lastVendedoresRows = [];
+  let lastVendedoresOnlineSet = new Set();
+  const knownUsers = new Map();
   let chartVentasUsuarios = null;
   let ventasUsuariosReq = 0;
   let ventasUsuariosTimer = null;
   let lastVU = { labels: [], values: [] };
 
-  // Fallback: lee del DOM el estado mostrado en la tabla (6ta columna)
-  // y devuelve conteos {activos, inactivos, suspendidos}.
-  const getVendCountsFromDOM = () => {
-    try {
-      const tbody = document.querySelector('#tablaVendedores tbody');
-      if (!tbody) return null;
-      let activos = 0, inactivos = 0, suspendidos = 0;
-      tbody.querySelectorAll('tr[data-id]').forEach((tr) => {
-        const badge = tr.querySelector('td:nth-child(6) .status-badge');
-        const txt = (badge?.textContent || '').trim().toLowerCase();
-        if (txt.startsWith('suspend')) suspendidos++;
-        else if (txt.startsWith('activo')) activos++;
-        else inactivos++;
-      });
-      return { activos, inactivos, suspendidos };
-    } catch (_) { return null; }
+  const vendorChartLabels = ['Activos', 'Inactivos', 'Suspendidos'];
+  const vendorChartColors = ['#37d67a', '#ff5a5f', '#ffb347'];
+  const vendorLegendMap = [
+    { key: 'activos', label: 'Activos', color: '#37d67a' },
+    { key: 'inactivos', label: 'Inactivos', color: '#ff5a5f' },
+    { key: 'suspendidos', label: 'Suspendidos', color: '#ffb347' },
+  ];
+
+  const ensureVendorChartPlaceholder = () => {
+    if (!vendorEstadoChartBox) return null;
+    const wrap = vendorEstadoChartBox.querySelector('.chart-box__canvas') || vendorEstadoChartBox;
+    let placeholder = wrap.querySelector('.chart-placeholder');
+    if (!placeholder) {
+      placeholder = document.createElement('p');
+      placeholder.className = 'chart-placeholder';
+      placeholder.textContent = 'Sin datos disponibles.';
+      wrap.appendChild(placeholder);
+    }
+    return placeholder;
   };
 
-  const renderChartVendEstado3 = (rows = [], onlineSet = new Set()) => {
+  const renderVendorLegend = (counts, total) => {
+    if (!vendorEstadoLegend) return;
+    const safeTotal = total || 0;
+    vendorEstadoLegend.innerHTML = vendorLegendMap.map((item) => {
+      const value = Number(counts[item.key] || 0);
+      const pct = safeTotal ? Math.round((value / safeTotal) * 100) : 0;
+      const pctText = safeTotal ? ` (${pct}%)` : '';
+      return `
+        <span class="legend-item">
+          <span class="legend-dot" style="background:${item.color};"></span>
+          ${item.label}: ${value}${pctText}
+        </span>
+      `;
+    }).join('');
+  };
+
+  const computeVendorStatusCounts = (rows = [], onlineSet = new Set()) => {
+    const counts = { activos: 0, inactivos: 0, suspendidos: 0 };
+    if (!Array.isArray(rows)) return counts;
+    rows.forEach((user) => {
+      if (!user || typeof user !== 'object') return;
+      if (!user.is_active) {
+        counts.suspendidos += 1;
+        return;
+      }
+      if (onlineSet && onlineSet.has(user.id)) counts.activos += 1;
+      else counts.inactivos += 1;
+    });
+    return counts;
+  };
+
+  const updateVendorEstadoChart = (rows = [], onlineSet = new Set()) => {
     if (!chartVendEstadoCtx) return;
     try {
-      const items = Array.isArray(rows) ? rows : [];
-      let suspended = items.filter((u) => !u.is_active).length;
-      const active = items.filter((u) => u.is_active).length;
-      let activos = items.filter((u) => u.is_active && onlineSet.has(u.id)).length;
-      let inactivos = Math.max(0, active - activos);
-      // Si por presencia no se detectan activos/inactivos (onlineSet vacio)
-      // pero hay suspendidos visibles, intenta leer conteos desde el DOM.
-      if ((activos + inactivos) === 0) {
-        const c = getVendCountsFromDOM();
-        if (c && (c.activos + c.inactivos + c.suspendidos) > 0) {
-          activos = c.activos; inactivos = c.inactivos; suspended = c.suspendidos;
+      const counts = computeVendorStatusCounts(rows, onlineSet);
+      const total = counts.activos + counts.inactivos + counts.suspendidos;
+      const placeholder = ensureVendorChartPlaceholder();
+      if (!total) {
+        if (placeholder) {
+          placeholder.style.display = 'flex';
+          placeholder.textContent = 'Sin datos para mostrar.';
         }
+        if (vendorEstadoLegend) vendorEstadoLegend.innerHTML = '';
+        if (vendorEstadoSummary) vendorEstadoSummary.textContent = '';
+        if (chartVendEstado) { chartVendEstado.destroy?.(); chartVendEstado = null; }
+        return;
       }
-      chartVendEstado = (chartVendEstado && typeof chartVendEstado.destroy==='function') ? (chartVendEstado.destroy(), null) : chartVendEstado;
-      chartVendEstado = new Chart(chartVendEstadoCtx, {
-        type: 'doughnut',
-        data: { labels: ['Activos', 'Inactivos', 'Suspendidos'], datasets: [{ data: [activos, inactivos, suspended], backgroundColor: ['#37d67a', '#ff5a5f', '#ffb347'], borderWidth: 0 }] },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { color: '#cfe6ff' } } } },
-      });
+      if (placeholder) placeholder.style.display = 'none';
+      if (vendorEstadoSummary) vendorEstadoSummary.textContent = `Total: ${total}`;
+      renderVendorLegend(counts, total);
+      const dataset = [counts.activos, counts.inactivos, counts.suspendidos];
+      if (!chartVendEstado) {
+        chartVendEstado = new Chart(chartVendEstadoCtx, {
+          type: 'doughnut',
+          data: {
+            labels: vendorChartLabels,
+            datasets: [{
+              data: dataset,
+              backgroundColor: vendorChartColors,
+              borderWidth: 0,
+              hoverOffset: 0,
+              hoverBorderWidth: 0,
+              spacing: 2,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '62%',
+            animation: { duration: 300 },
+            plugins: {
+              legend: { position: 'bottom', labels: { color: '#cfe6ff' } },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `${ctx.label}: ${Number(ctx.parsed || 0)}`,
+                },
+              },
+            },
+          },
+        });
+        return;
+      }
+      chartVendEstado.data.datasets[0].data = dataset;
+      chartVendEstado.update('none');
     } catch (err) { console.error('Error actualizando grafico vendedores:', err); }
   };
-const showModal = (el) => { if (el) el.style.display = 'flex'; };
-  const hideModal = (el) => { if (el) el.style.display = 'none'; };
+
+  const userChartLabels = ['Activos', 'Inactivos', 'Suspendidos'];
+  const userChartColors = ['#37d67a', '#ff5a5f', '#ffb347'];
+  const userLegendMap = [
+    { key: 'activos', label: 'Activos', color: '#37d67a' },
+    { key: 'inactivos', label: 'Inactivos', color: '#ff5a5f' },
+    { key: 'suspendidos', label: 'Suspendidos', color: '#ffb347' },
+  ];
+
+  const renderUserLegend = (counts, total) => {
+    if (!userEstadoLegend) return;
+    const safeTotal = total || 0;
+    userEstadoLegend.innerHTML = userLegendMap.map((item) => {
+      const value = Number(counts[item.key] || 0);
+      const pct = safeTotal ? Math.round((value / safeTotal) * 100) : 0;
+      const pctText = safeTotal ? ` (${pct}%)` : '';
+      return `
+        <span class="legend-item">
+          <span class="legend-dot" style="background:${item.color};"></span>
+          ${item.label}: ${value}${pctText}
+        </span>
+      `;
+    }).join('');
+  };
+
+  const ensureUserPlaceholder = () => {
+    if (!userEstadoChartBox) return null;
+    const wrap = userEstadoChartBox.querySelector('.chart-box__canvas') || userEstadoChartBox;
+    let placeholder = wrap.querySelector('.chart-placeholder');
+    if (!placeholder) {
+      placeholder = document.createElement('p');
+      placeholder.className = 'chart-placeholder';
+      placeholder.textContent = 'Sin datos para mostrar.';
+      wrap.appendChild(placeholder);
+    }
+    return placeholder;
+  };
+
+  const computeUserStatusCounts = (rows = [], onlineSet = new Set()) => {
+    const counts = { activos: 0, inactivos: 0, suspendidos: 0 };
+    if (!Array.isArray(rows)) return counts;
+    rows.forEach((user) => {
+      if (!user || typeof user !== 'object') return;
+      if (!user.is_active) {
+        counts.suspendidos += 1;
+        return;
+      }
+      if (onlineSet && onlineSet.has(user.id)) counts.activos += 1;
+      else counts.inactivos += 1;
+    });
+    return counts;
+  };
+
+  const updateUserEstadoChart = (rows = null, onlineSet = null) => {
+    if (!userEstadoChartBox) return;
+    if (!chartUserEstadoCtx) {
+      const canvas = document.getElementById('chartUserEstado');
+      chartUserEstadoCtx = canvas ? canvas.getContext('2d') : null;
+    }
+    if (!chartUserEstadoCtx) return;
+    try {
+      const dataRows = Array.isArray(rows) ? rows : (Array.isArray(lastUsuariosRows) ? lastUsuariosRows : []);
+      const presenceSet = (onlineSet instanceof Set) ? onlineSet : lastUsuariosOnlineSet;
+      const counts = computeUserStatusCounts(dataRows, presenceSet);
+      const total = counts.activos + counts.inactivos + counts.suspendidos;
+      const placeholder = ensureUserPlaceholder();
+      if (!total) {
+        if (placeholder) {
+          placeholder.style.display = 'flex';
+          placeholder.textContent = 'Sin datos para mostrar.';
+        }
+        if (userEstadoChartBox) userEstadoChartBox.style.display = 'none';
+        if (userEstadoLegend) userEstadoLegend.innerHTML = '';
+        if (userEstadoSummary) userEstadoSummary.textContent = '';
+        chartUserEstado = destroyChart(chartUserEstado);
+        return;
+      }
+      if (placeholder) placeholder.style.display = 'none';
+      userEstadoChartBox.style.display = '';
+      if (userEstadoSummary) userEstadoSummary.textContent = `Total: ${total}`;
+      renderUserLegend(counts, total);
+      const dataset = [counts.activos, counts.inactivos, counts.suspendidos];
+      if (!chartUserEstado) {
+        chartUserEstado = new Chart(chartUserEstadoCtx, {
+          type: 'doughnut',
+          data: {
+            labels: userChartLabels,
+            datasets: [{
+              data: dataset,
+              backgroundColor: userChartColors,
+              borderWidth: 0,
+              hoverOffset: 0,
+              hoverBorderWidth: 0,
+              spacing: 2,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            cutout: '62%',
+            animation: { duration: 300 },
+            plugins: {
+              legend: { display: false },
+              tooltip: {
+                callbacks: {
+                  label: (ctx) => `${ctx.label}: ${Number(ctx.parsed || 0)}`,
+                },
+              },
+            },
+          },
+        });
+        return;
+      }
+      chartUserEstado.data.datasets[0].data = dataset;
+      chartUserEstado.update('none');
+    } catch (err) { console.error('Error actualizando grafico usuarios:', err); }
+  };
+  const showModal = (el) => {
+    if (!el) return;
+    el.removeAttribute('hidden');
+    el.style.display = 'flex';
+  };
+  const hideModal = (el) => {
+    if (!el) return;
+    el.style.display = 'none';
+    el.setAttribute('hidden', 'hidden');
+  };
+  // Asegura que los modales inicien ocultos aunque falle el CSS
+  hideModal(modalEditar);
+  hideModal(modalAgregar);
 
   /* ----------------------- renderers ----------------------- */
   const renderVendedores = (rows, onlineSet = new Set()) => {
@@ -471,7 +718,10 @@ const showModal = (el) => { if (el) el.style.display = 'flex'; };
           </td>
           <td><span class="${badgeClass}" aria-live="polite">${label}</span></td>
           <td>
-            <button class=\"status-badge ${disabled ? 'offline' : 'online'}\" data-action="toggle" title="Cambiar estado">${disabled ? 'Inactivo' : 'Activo'}</button>
+            <div class="state-toggle">
+              <button class="state-toggle__btn ${disabled ? '' : 'state-toggle__btn--active'}" data-action="set-active">Activo</button>
+              <button class="state-toggle__btn ${disabled ? 'state-toggle__btn--active' : ''}" data-action="set-inactive">Inactivo</button>
+            </div>
           </td>
           <td>
             <button class="btn" data-action="edit">Editar</button>
@@ -479,6 +729,29 @@ const showModal = (el) => { if (el) el.style.display = 'flex'; };
         </tr>
       `;
     }).join('');
+  };
+
+  const updateCachedUser = (id, patch = {}) => {
+    if (!Array.isArray(lastUsuariosRows)) return;
+    const idx = lastUsuariosRows.findIndex((u) => Number(u.id) === Number(id));
+    if (idx === -1) return;
+    lastUsuariosRows[idx] = { ...lastUsuariosRows[idx], ...patch };
+  };
+
+  const updateCachedVendor = (id, patch = {}) => {
+    if (!Array.isArray(lastVendedoresRows)) return;
+    const idx = lastVendedoresRows.findIndex((u) => Number(u.id) === Number(id));
+    if (idx === -1) return;
+    lastVendedoresRows[idx] = { ...lastVendedoresRows[idx], ...patch };
+  };
+
+  const syncStateToggle = (row, isActive) => {
+    if (!row) return;
+    row.querySelectorAll('.state-toggle__btn').forEach((btn) => {
+      if (!btn.dataset.action) return;
+      const wantsActive = btn.dataset.action === 'set-active';
+      btn.classList.toggle('state-toggle__btn--active', wantsActive === isActive);
+    });
   };
 
   const renderUsuarios = (rows, onlineSet = new Set()) => {
@@ -500,7 +773,10 @@ const showModal = (el) => { if (el) el.style.display = 'flex'; };
           <td>${sanitize(u.role || (u.es_vendedor ? 'Vendedor' : 'Usuario'))}</td>
           <td><span class="${badgeClass}" aria-live="polite">${label}</span></td>
           <td>
-            <button class=\"status-badge ${disabled ? 'offline' : 'online'}\" data-action="toggle" title="Cambiar estado">${disabled ? 'Inactivo' : 'Activo'}</button>
+            <div class="state-toggle">
+              <button class="state-toggle__btn ${disabled ? '' : 'state-toggle__btn--active'}" data-action="set-active">Activo</button>
+              <button class="state-toggle__btn ${disabled ? 'state-toggle__btn--active' : ''}" data-action="set-inactive">Inactivo</button>
+            </div>
           </td>
           <td>${sanitize(u.last_login || '-')}</td>
           <td>
@@ -592,26 +868,6 @@ const showModal = (el) => { if (el) el.style.display = 'flex'; };
     return null;
   };
 
-  const ensureUserChartDOM = () => {
-    const section = document.getElementById('usuarios_gestion');
-    if (!section) return null;
-    let box = document.getElementById('userEstadoChartBox');
-    if (!box) {
-      const wrapper = document.createElement('div');
-      wrapper.className = 'charts-wrapper user-charts';
-      box = document.createElement('div');
-      box.className = 'chart-box small';
-      box.id = 'userEstadoChartBox';
-      box.innerHTML = '<h3 class="chart-title">Activos / Inactivos / Suspendidos</h3><canvas id="chartUserEstado"></canvas>';
-      wrapper.appendChild(box);
-      section.appendChild(document.createElement('br'));
-      section.appendChild(wrapper);
-    }
-    const canvas = document.getElementById('chartUserEstado');
-    chartUserEstadoCtx = canvas ? canvas.getContext('2d') : null;
-    return chartUserEstadoCtx;
-  };
-
   const showVendorEstadoChart = () => {
     if (vendorEstadoChartBox) vendorEstadoChartBox.style.display = '';
   };
@@ -637,68 +893,6 @@ const showModal = (el) => { if (el) el.style.display = 'flex'; };
       vendorTopPlaceholder.style.display = 'block';
     }
   };
-
-  const renderChartVendEstado = async () => {
-    if (!chartVendEstadoCtx) return;
-    try {
-    const data = await api('/api/admin/vendedores-estado/?presence=1&window=180');
-      const activos = Number(data.activos || 0);
-      const inactivos = Number(data.inactivos || 0);
-      chartVendEstado = destroyChart(chartVendEstado);
-      chartVendEstado = new Chart(chartVendEstadoCtx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Activos', 'Inactivos', 'Suspendidos'],
-          datasets: [{
-            data: [activos, inactivos],
-            backgroundColor: ['#37d67a', '#ff5a5f'],
-            borderWidth: 0,
-          }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: { color: '#cfe6ff' },
-            },
-          },
-        },
-      });
-    } catch (err) {
-      console.error('Error cargando grpafico de estado de vendedores:', err);
-    }
-  };
-
-  const renderChartUserEstado = async (onlineSet) => {
-    const ctx = ensureUserChartDOM();
-    if (!ctx) return;
-    try {
-      const set = onlineSet || await getUsuariosOnline();
-      const rows = Array.isArray(lastUsuariosRows) ? lastUsuariosRows : [];
-      const suspendidos = rows.filter((u) => !u.is_active).length;
-      const activosTotal = rows.filter((u) => u.is_active).length;
-      const online = rows.filter((u) => u.is_active && set.has(u.id)).length;
-      const inactivos = Math.max(0, activosTotal - online);
-      chartUserEstado = destroyChart(chartUserEstado);
-      chartUserEstado = new Chart(ctx, {
-        type: 'doughnut',
-        data: {
-          labels: ['Activos', 'Inactivos', 'Suspendidos'],
-          datasets: [{ data: [online, inactivos, suspendidos], backgroundColor: ['#37d67a', '#ff5a5f', '#ffb347'], borderWidth: 0 }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: { legend: { position: 'bottom', labels: { color: '#cfe6ff' } } },
-        },
-      });
-    } catch (err) {
-      console.error('Error cargando gráfico de estado de usuarios:', err);
-    }
-  };
-
   const renderVendorTopChart = async (vendor) => {
     if (!chartVendTopCtx || !vendor || !vendor.vendedor_id) return;
     const requestId = ++vendTopReq;
@@ -749,12 +943,12 @@ const showModal = (el) => { if (el) el.style.display = 'flex'; };
     } catch (err) {
       if (requestId !== vendTopReq) return;
       console.error('Error cargando top productos por vendedor:', err);
-      showVendorTopMessage('No se pudo cargar la información de ventas.');
+      showVendorTopMessage('No se pudo cargar la informacion de ventas.');
     }
   };
 
-const refreshVendorCharts = (rows, onlineSet = new Set()) => {
-    renderChartVendEstado3(rows, onlineSet);
+  const refreshVendorCharts = (rows, onlineSet = new Set()) => {
+    updateVendorEstadoChart(rows, onlineSet);
     const query = (vendBuscar?.value || '').trim();
     if (!query) {
       showVendorEstadoChart();
@@ -789,17 +983,18 @@ const refreshVendorCharts = (rows, onlineSet = new Set()) => {
   async function loadVendedores() {
     if (!vendBody) return;
     setStateRow(vendBody, 7, 'Cargando vendedores...');
-            try {
+    try {
       const q = (vendBuscar?.value || '').trim();
       const estado = vendEstado?.value || 'todos';
-      // Para 'inactivo' (presencia) necesitamos usuarios activos desde el backend,
-      // y para 'suspendido' basta con los deshabilitados. En los demas casos traemos todos.
       const estadoQuery = (estado === 'suspendido') ? 'inactivo' : 'todos';
       const url = `/api/admin/vendedores/?estado=${encodeURIComponent(estadoQuery)}&q=${encodeURIComponent(q)}`;
       const data = await api(url);
-      let items = Array.isArray(data.items) ? data.items : [];
-      items = items.filter((u) => u.es_vendedor || u.role === 'Vendedor' || u.vendedor_id);
+      const rawItems = Array.isArray(data.items) ? data.items : [];
+      updateKnownUsers(rawItems);
+      let items = rawItems.filter((u) => u.es_vendedor || u.role === 'Vendedor' || u.vendedor_id);
       const onlineSet = await getUsuariosOnline();
+      lastVendedoresOnlineSet = onlineSet;
+      lastUsuariosOnlineSet = onlineSet;
       if (estado === 'activo') {
         items = items.filter((u) => u.is_active && onlineSet.has(u.id));
       } else if (estado === 'inactivo') {
@@ -810,11 +1005,11 @@ const refreshVendorCharts = (rows, onlineSet = new Set()) => {
       lastVendedoresRows = items;
       renderVendedores(items, onlineSet);
       startVendedoresRealtime(onlineSet);
-      refreshVendorCharts(items, onlineSet);} catch (err) {
+      refreshVendorCharts(items, onlineSet);
+    } catch (err) {
       console.error(err);
       showToast('No se pudo cargar vendedores', 'error');
       setStateRow(vendBody, 7, 'Error al cargar');
-      renderChartVendEstado();
       const query = (vendBuscar?.value || '').trim();
       if (!query) {
         showVendorEstadoChart();
@@ -822,7 +1017,7 @@ const refreshVendorCharts = (rows, onlineSet = new Set()) => {
       } else {
         hideVendorEstadoChart();
         if (vendorTopName) vendorTopName.textContent = query;
-      showVendorTopMessage('No se pudo cargar la información de ventas.');
+        showVendorTopMessage('No se pudo cargar la información de ventas.');
       }
     }
   }
@@ -872,9 +1067,11 @@ const refreshVendorCharts = (rows, onlineSet = new Set()) => {
       return;
     }
     ventasUsuariosStats.style.display = 'flex';
+    const currentWindow = parseInt(ventasUsuariosWindowSel?.value || '180', 10) || 180;
+    const currentRange = parseInt(ventasUsuariosRangeSel?.value || '30', 10) || 30;
     const hint = presenceOn
-      ? `Basado en presencia dentro de ${ventasUsuariosWindowSel?.value || 180} segundos.`
-      : 'Basado en último acceso dentro de los últimos 30 dís.';
+      ? `Basado en presencia dentro de ${currentWindow} segundos.`
+      : `Basado en último acceso dentro de los últimos ${currentRange} días.`;
     const cards = entries.map(([key, data]) => {
       const label = roleLabels[key] || key;
       const activos = Number(data?.activos || 0);
@@ -898,7 +1095,6 @@ const refreshVendorCharts = (rows, onlineSet = new Set()) => {
       </div>
     `;
   };
-
   const renderVentasUsuariosChart = (labels, values) => {
     if (!ventasUsuariosCtx) return;
     chartVentasUsuarios = destroyChart(chartVentasUsuarios);
@@ -1035,8 +1231,9 @@ const refreshVendorCharts = (rows, onlineSet = new Set()) => {
       const estadoQuery = (estado === 'suspendido') ? 'inactivo' : 'todos';
       const url = `/api/admin/vendedores/?estado=${encodeURIComponent(estadoQuery)}&q=${encodeURIComponent(q)}`;
       const data = await api(url);
-      let items = Array.isArray(data.items) ? data.items : [];
-      items = items.filter((u) => !u.es_admin && !u.es_vendedor && u.role !== 'Vendedor');
+      const rawItems = Array.isArray(data.items) ? data.items : [];
+      updateKnownUsers(rawItems);
+      let items = rawItems.filter((u) => !u.es_admin && !u.es_vendedor && u.role !== 'Vendedor');
       // Apply presence-based filter
       const onlineSet = await getUsuariosOnline();
       if (estado === 'activo') {
@@ -1053,7 +1250,7 @@ const refreshVendorCharts = (rows, onlineSet = new Set()) => {
       lastUsuariosRows = items;
       renderUsuarios(items, onlineSet);
       startUsuariosRealtime(onlineSet);
-      renderChartUserEstado(onlineSet);
+      updateUserEstadoChart(items, onlineSet);
     } catch (err) {
       console.error(err);
       showToast('No se pudo cargar usuarios', 'error');
@@ -1163,8 +1360,23 @@ const openEditModal = (row) => {
     vendBuscar._t = setTimeout(loadVendedores, 200);
   });
   vendEstado?.addEventListener('change', loadVendedores);
+  const setCreateModalTitle = (mode) => {
+    if (!modalAgregarTitle) return;
+    modalAgregarTitle.textContent = mode === 'vendor' ? 'Agregar vendedor' : 'Agregar usuario';
+  };
+
+  const setCreateFormError = (message = '') => {
+    if (!modalAgregarError) return;
+    modalAgregarError.textContent = message;
+    modalAgregarError.style.display = message ? 'block' : 'none';
+  };
+  setCreateModalTitle('vendor');
+  setCreateFormError('');
+
   vendBtnAgregar?.addEventListener('click', () => {
     createMode = 'vendor';
+    setCreateModalTitle('vendor');
+    setCreateFormError('');
     if (newNombre) newNombre.value = '';
     if (newEmail) newEmail.value = '';
     if (newPass) newPass.value = '';
@@ -1180,6 +1392,8 @@ const openEditModal = (row) => {
   usrEstado?.addEventListener('change', loadUsuarios);
   usrBtnAgregar?.addEventListener('click', () => {
     createMode = 'user';
+    setCreateModalTitle('user');
+    setCreateFormError('');
     if (newNombre) newNombre.value = '';
     if (newEmail) newEmail.value = '';
     if (newPass) newPass.value = '';
@@ -1195,27 +1409,23 @@ const openEditModal = (row) => {
     const id = Number(row.dataset.id);
     if (!id) return;
     const action = btn.dataset.action;
-    if (action === 'toggle' || btn.classList.contains('status-badge')) {
+    if (action === 'set-active' || action === 'set-inactive') {
       try {
+        const wantsActive = action === 'set-active';
         const currentlyDisabled = row.getAttribute('data-disabled') === '1';
-        const newActive = currentlyDisabled; // si estaba inactivo, activar; si activo, desactivar
-        await api('/api/admin/vendedores/', { method: 'PUT', body: { id, is_active: newActive, es_vendedor: true } });
-        row.setAttribute('data-disabled', newActive ? '0' : '1');
-        const disabledNow = !newActive;
+        if (wantsActive === !currentlyDisabled) return;
+        await api('/api/admin/vendedores/', { method: 'PUT', body: { id, is_active: wantsActive, es_vendedor: true } });
+        row.setAttribute('data-disabled', wantsActive ? '0' : '1');
         const estadoBadge = row.querySelector('td:nth-child(6) .status-badge');
         if (estadoBadge) {
-          estadoBadge.textContent = disabledNow ? 'Suspendido' : 'Activo';
-          estadoBadge.classList.toggle('online', !disabledNow);
-          estadoBadge.classList.toggle('offline', disabledNow);
-          estadoBadge.classList.toggle('suspended', disabledNow);
+          estadoBadge.textContent = wantsActive ? 'Activo' : 'Suspendido';
+          estadoBadge.classList.toggle('online', wantsActive);
+          estadoBadge.classList.toggle('offline', !wantsActive);
+          estadoBadge.classList.toggle('suspended', !wantsActive);
         }
-        const toggleBadge = row.querySelector('td:nth-child(7) .status-badge');
-        if (toggleBadge) {
-          toggleBadge.textContent = disabledNow ? 'Inactivo' : 'Activo';
-          toggleBadge.classList.toggle('online', !disabledNow);
-          toggleBadge.classList.toggle('offline', disabledNow);
-          
-        }
+        syncStateToggle(row, wantsActive);
+        updateCachedVendor(id, { is_active: wantsActive });
+        try { updateVendorEstadoChart(lastVendedoresRows, lastVendedoresOnlineSet); } catch (_) {}
       } catch (err) {
         console.error(err);
         showApiError(err, 'No se pudo cambiar el estado');
@@ -1247,30 +1457,24 @@ const openEditModal = (row) => {
     const id = Number(row.dataset.id);
     if (!id) return;
     const action = btn.dataset.action;
-    if (action === 'toggle' || btn.classList.contains('status-badge')) {
+    if (action === 'set-active' || action === 'set-inactive') {
       try {
+        const wantsActive = action === 'set-active';
         const currentlyDisabled = row.getAttribute('data-disabled') === '1';
-        const newActive = currentlyDisabled;
+        if (wantsActive === !currentlyDisabled) return;
         const keepVendor = row.dataset.vendor === '1';
-        await api('/api/admin/vendedores/', { method: 'PUT', body: { id, is_active: newActive, es_vendedor: keepVendor } });
-        row.setAttribute('data-disabled', newActive ? '0' : '1');
-        const disabledNow = !newActive;
+        await api('/api/admin/vendedores/', { method: 'PUT', body: { id, is_active: wantsActive, es_vendedor: keepVendor } });
+        row.setAttribute('data-disabled', wantsActive ? '0' : '1');
         const estadoBadge = row.querySelector('td:nth-child(5) .status-badge');
         if (estadoBadge) {
-          estadoBadge.textContent = disabledNow ? 'Suspendido' : 'Activo';
-          estadoBadge.classList.toggle('online', !disabledNow);
-          estadoBadge.classList.toggle('offline', disabledNow);
-          estadoBadge.classList.toggle('suspended', disabledNow);
+          estadoBadge.textContent = wantsActive ? 'Activo' : 'Suspendido';
+          estadoBadge.classList.toggle('online', wantsActive);
+          estadoBadge.classList.toggle('offline', !wantsActive);
+          estadoBadge.classList.toggle('suspended', !wantsActive);
         }
-        const toggleBadge = row.querySelector('td:nth-child(6) .status-badge');
-        if (toggleBadge) {
-          toggleBadge.textContent = disabledNow ? 'Inactivo' : 'Activo';
-          toggleBadge.classList.toggle('online', !disabledNow);
-          toggleBadge.classList.toggle('offline', disabledNow);
-          
-        }
-        // refrescar donut inmediatamente
-        try { renderChartUserEstado(); } catch(_) {}
+        syncStateToggle(row, wantsActive);
+        updateCachedUser(id, { is_active: wantsActive });
+        try { updateUserEstadoChart(); } catch(_) {}
       } catch (err) {
         console.error(err);
         showApiError(err, 'No se pudo cambiar el estado');
@@ -1295,7 +1499,10 @@ const openEditModal = (row) => {
     }
   });
   modalAgregar?.addEventListener('click', (ev) => {
-    if (ev.target === modalAgregar) hideModal(modalAgregar);
+    if (ev.target === modalAgregar) {
+      hideModal(modalAgregar);
+      setCreateFormError('');
+    }
   });
 
   btnGuardarEditar?.addEventListener('click', async () => {
@@ -1348,7 +1555,11 @@ const openEditModal = (row) => {
     }
   });
 
-  btnCancelarNuevo?.addEventListener('click', () => hideModal(modalAgregar));
+  btnCancelarNuevo?.addEventListener('click', (ev) => {
+    ev?.preventDefault?.();
+    hideModal(modalAgregar);
+    setCreateFormError('');
+  });
 
   // Bind password UI updates
   try {
@@ -1365,22 +1576,60 @@ const openEditModal = (row) => {
     }
   } catch(_) {}
 
-  btnGuardarNuevo?.addEventListener('click', async () => {
+  btnGuardarNuevo?.addEventListener('click', async (ev) => {
+    ev?.preventDefault?.();
+    ev?.stopPropagation?.();
     try {
+      setCreateFormError('');
       const username = (newNombre?.value || '').trim();
       const email = (newEmail?.value || '').trim();
       const password = (newPass?.value || '').trim();
       if (!username || !password) {
-        showToast('Nombre y contraseña son obligatorios', 'error');
+        const msg = 'Nombre y contraseña son obligatorios';
+        setCreateFormError(msg);
+        showToast(msg, 'error');
         return;
       }
-      if (username.length < 3) { showToast('El usuario debe tener al menos 3 caracteres', 'error'); return; }
-      if (email && !isEmail(email)) { showToast('Email invalido', 'error'); return; }
-      if (!isStrongPassword(password)) { showToast('La contraseña debe tener 8+ caracteres con mayúscula, minúscula, número y símbolo.', 'error'); return; }
-      if ((newPass2?.value || '') !== password) { showToast('Las contraseñas no coinciden', 'error'); return; }
+      if (username.length < 3) {
+        const msg = 'El usuario debe tener al menos 3 caracteres';
+        setCreateFormError(msg);
+        showToast(msg, 'error');
+        return;
+      }
+      if (usernameExists(username)) {
+        const msg = 'Ese nombre de usuario ya está en uso. Prueba con otro.';
+        setCreateFormError(msg);
+        showToast(msg, 'error');
+        return;
+      }
+      if (email && !isEmail(email)) {
+        const msg = 'Email inválido';
+        setCreateFormError(msg);
+        showToast(msg, 'error');
+        return;
+      }
+      if (email && emailExists(email)) {
+        const msg = 'Ese correo ya está registrado. Usa uno diferente.';
+        setCreateFormError(msg);
+        showToast(msg, 'error');
+        return;
+      }
+      if (!isStrongPassword(password)) {
+        const msg = 'La contraseña debe tener 8+ caracteres con mayúscula, minúscula, número y símbolo.';
+        setCreateFormError(msg);
+        showToast(msg, 'error');
+        return;
+      }
+      if ((newPass2?.value || '') !== password) {
+        const msg = 'Las contraseñas no coinciden';
+        setCreateFormError(msg);
+        showToast(msg, 'error');
+        return;
+      }
       const body = { username, email, password, es_vendedor: createMode === 'vendor' };
       await api('/api/admin/vendedores/', { method: 'POST', body });
       showToast('Usuario creado', 'success');
+      setCreateFormError('');
       hideModal(modalAgregar);
       if (createMode === 'vendor') {
         await loadVendedores();
@@ -1390,7 +1639,8 @@ const openEditModal = (row) => {
       dispatchDataChanged();
     } catch (err) {
       console.error(err);
-      showApiError(err, 'No se pudo crear');
+      const msg = showApiError(err, 'No se pudo crear');
+      setCreateFormError(msg);
     }
   });
 
@@ -1644,8 +1894,10 @@ const openEditModal = (row) => {
     const entries = Object.entries(counts);
     if (!entries.length) { estadoGlobalStats.innerHTML = ''; estadoGlobalStats.style.display = 'none'; return; }
     estadoGlobalStats.style.display = 'flex';
+    const currentWindow = parseInt(estadoGlobalWindowSel?.value || '180', 10) || 180;
+    const currentRange = parseInt(estadoGlobalRangeSel?.value || '30', 10) || 30;
     const roleLabels = { usuarios: 'Usuarios', vendedores: 'Vendedores', administradores: 'Administradores' };
-    const hint = presenceOn ? `Basado en presencia dentro de ${estadoGlobalWindowSel?.value || 180} segundos.` : 'Basado en último acceso dentro de los últimos 30 días.';
+    const hint = presenceOn ? `Basado en presencia dentro de ${currentWindow} segundos.` : `Basado en último acceso dentro de los últimos ${currentRange} días.`;
     const cards = entries.map(([key, data]) => {
       const label = roleLabels[key] || key;
       const activos = Number(data?.activos || 0);
@@ -1777,6 +2029,12 @@ const openEditModal = (row) => {
     document.addEventListener('DOMContentLoaded', () => scheduleEstadoGlobalLoad(200));
   }
   window.addEventListener('admin:data-changed', () => { scheduleEstadoGlobalLoad(400); setTimeout(updateEstadoGlobalHintRuntime, 600); });
+  window.__dashboardAdminEnhancedReady = true;
+
+
+
+
+
 
 
 

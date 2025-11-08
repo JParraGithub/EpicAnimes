@@ -24,7 +24,7 @@ from django.contrib.auth.decorators import login_required
 
 from django.contrib.auth.models import User, Group
 
-from django.contrib.auth.views import LoginView
+from django.contrib.auth.views import LoginView, PasswordResetView
 
 from django.core.exceptions import ValidationError
 
@@ -58,7 +58,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 
 from django.templatetags.static import static
 
-from django.urls import reverse
+from django.urls import reverse, reverse_lazy
 
 from django.utils import timezone
 
@@ -78,6 +78,9 @@ from .payments import (
     PayPalError,
     paypal_is_configured,
     paypal_amount_step,
+    paypal_conversion_summary,
+    get_paypal_conversion_rate,
+    normalize_paypal_totals,
 )
 from .chatbot import responder as chatbot_responder
 
@@ -847,76 +850,6 @@ def VistaSobreNosotros(request):
 
 
 
-@require_http_methods(["POST"])
-
-def send_login_otp(request):
-
-    """Envía un código de verificación (6 dígitos) al correo del usuario indicado.
-
-
-
-    Acepta: username o email en POST.
-
-    Responde: {ok: True} o {error: "mensaje"}
-
-    """
-
-    ident = (request.POST.get("username") or request.POST.get("email") or "").strip()
-
-    if not ident:
-
-        return JsonResponse({"error": "Falta usuario o email"}, status=400)
-
-    try:
-
-        try:
-
-            user = User.objects.get(username=ident)
-
-        except User.DoesNotExist:
-
-            user = User.objects.get(email__iexact=ident)
-
-    except User.DoesNotExist:
-
-        return JsonResponse({"error": "Usuario no encontrado"}, status=404)
-
-    if not user.email:
-
-        return JsonResponse({"error": "Este usuario no tiene email registrado"}, status=400)
-
-    import random
-
-    code = random.randint(100000, 999999)
-
-    cache.set(f"login_otp:{user.id}", str(code), 300)
-
-    asunto = "Código de verificación EpicAnimes"
-
-    cuerpo = (
-
-        f"Hola {user.username},\n\n"
-
-        f"Tu código de verificación es: {code}.\n"
-
-        "Es válido por 5 minutos. Si no solicitaste este código, ignora este mensaje.\n\n"
-
-        "EpicAnimes"
-
-    )
-
-    try:
-
-        send_mail(asunto, cuerpo, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
-
-    except Exception:
-
-        return JsonResponse({"error": "No se pudo enviar el correo"}, status=500)
-
-    return JsonResponse({"ok": True})
-
-
-
 
 
 @require_http_methods(["GET", "POST"])
@@ -1046,11 +979,8 @@ def VistaRegistro(request):
     if request.method == "POST":
 
         username = (request.POST.get("username") or "").strip()
-
         email = (request.POST.get("email") or "").strip()
-
         p1 = (request.POST.get("password1") or "").strip()
-
         p2 = (request.POST.get("password2") or "").strip()
 
 
@@ -1058,23 +988,29 @@ def VistaRegistro(request):
         errores = []
 
         if not username:
-
             errores.append("El nombre de usuario es obligatorio.")
 
-        if not p1:
+        if not email:
+            errores.append("El correo electrónico es obligatorio.")
+        else:
+            try:
+                validate_email(email)
+            except ValidationError:
+                errores.append("Ingresa un correo electrónico válido.")
 
+        if email and User.objects.filter(email__iexact=email).exists():
+            errores.append("El correo electrónico ya está registrado.")
+
+        if not p1:
             errores.append("La contraseña es obligatoria.")
 
         if p1 and len(p1) < 6:
-
             errores.append("La contraseña debe tener al menos 6 caracteres.")
 
         if p1 != p2:
-
             errores.append("Las contraseñas no coinciden.")
 
         if User.objects.filter(username=username).exists():
-
             errores.append("El nombre de usuario ya existe.")
 
 
@@ -1133,57 +1069,14 @@ def _procesar_compra(request, referencia_pago=None, datos_cliente=None):
 
 
 
-    moneda_paypal = getattr(settings, "PAYPAL_CURRENCY", "CLP")
-
-    paso_moneda = paypal_amount_step(moneda_paypal)
-
-    order_currency = getattr(settings, "PAYPAL_ORDER_CURRENCY", moneda_paypal)
-
-    order_step = paypal_amount_step(order_currency)
-
-    conversion_rate = getattr(settings, "PAYPAL_CONVERSION_RATE", Decimal("1"))
-
-    order_total = Decimal("0")
-
     with transaction.atomic():
 
         lineas, total = _calcular_lineas_y_total(cart, lock=True)
 
         try:
-
-            total = total.quantize(paso_moneda)
-
-        except InvalidOperation:
-
-            # Si el precio tiene más decimales que la moneda soporta, forzamos el redondeo.
-
-            total = (total / paso_moneda).to_integral_value() * paso_moneda
-
-        order_total = total
-
-        if conversion_rate and conversion_rate != Decimal("1"):
-
-            if conversion_rate <= 0:
-
-                raise CarritoError("La tasa de conversión configurada para PayPal es inválida.")
-
-            try:
-
-                order_total = (total / conversion_rate).quantize(order_step)
-
-            except InvalidOperation:
-
-                order_total = (total / conversion_rate).quantize(order_step, rounding=ROUND_HALF_UP)
-
-        elif order_currency != moneda_paypal:
-
-            try:
-
-                order_total = total.quantize(order_step)
-
-            except InvalidOperation:
-
-                order_total = total.quantize(order_step, rounding=ROUND_HALF_UP)
+            total, order_total, _, moneda_paypal, order_currency = _calcular_totales_paypal(total)
+        except PayPalError as exc:
+            raise CarritoError(str(exc))
 
 
 
@@ -1292,6 +1185,19 @@ def _procesar_compra(request, referencia_pago=None, datos_cliente=None):
     return total
 
 
+def _calcular_totales_paypal(total):
+    moneda_paypal = getattr(settings, "PAYPAL_CURRENCY", "CLP")
+    order_currency = getattr(settings, "PAYPAL_ORDER_CURRENCY", moneda_paypal)
+    conversion_rate, _ = get_paypal_conversion_rate()
+    total_normalizado, total_paypal = normalize_paypal_totals(
+        total,
+        conversion_rate=conversion_rate,
+        store_currency=moneda_paypal,
+        order_currency=order_currency,
+    )
+    return total_normalizado, total_paypal, conversion_rate, moneda_paypal, order_currency
+
+
 
 
 
@@ -1357,38 +1263,7 @@ def VistaCarrito(request):
 
     puede_pagar = es_comprador and carrito_sin_fallos and bool(items)
 
-    paypal_order_currency = getattr(settings, "PAYPAL_ORDER_CURRENCY", getattr(settings, "PAYPAL_CURRENCY", "USD"))
-
-    paypal_conversion_rate = getattr(settings, "PAYPAL_CONVERSION_RATE", Decimal("1"))
-
-    try:
-
-        conversion_rate_display = format(paypal_conversion_rate, "f")
-
-        if "." in conversion_rate_display:
-            conversion_rate_display = conversion_rate_display.rstrip("0").rstrip(".")
-
-    except Exception:
-
-        conversion_rate_display = str(paypal_conversion_rate)
-
-    paypal_uses_conversion = (paypal_order_currency != getattr(settings, "PAYPAL_CURRENCY", "CLP") or paypal_conversion_rate != Decimal("1"))
-
-    paypal_order_estimate = None
-
-    if paypal_uses_conversion:
-
-        try:
-
-            if paypal_conversion_rate and paypal_conversion_rate != Decimal("0"):
-
-                order_step_ctx = paypal_amount_step(paypal_order_currency)
-
-                paypal_order_estimate = (total / paypal_conversion_rate).quantize(order_step_ctx)
-
-        except (InvalidOperation, ZeroDivisionError):
-
-            paypal_order_estimate = None
+    paypal_summary = paypal_conversion_summary(total)
 
     contexto = {
 
@@ -1400,15 +1275,7 @@ def VistaCarrito(request):
 
         "paypal_client_id": getattr(settings, "PAYPAL_CLIENT_ID", ""),
 
-        "paypal_currency": getattr(settings, "PAYPAL_CURRENCY", "CLP"),
-
-        "paypal_order_currency": paypal_order_currency,
-
-        "paypal_conversion_rate": paypal_conversion_rate,
-
-        "paypal_conversion_rate_display": conversion_rate_display,
-
-        "paypal_order_estimate": paypal_order_estimate,
+        **paypal_summary,
 
         "paypal_enabled": paypal_configurado,
 
@@ -1419,13 +1286,8 @@ def VistaCarrito(request):
         "rol_usuario": rol_actual,
 
         "puede_comprar": es_comprador,
-
         "puede_pagar": puede_pagar,
-
         "puede_pagar_paypal": puede_pagar and paypal_configurado,
-
-        "paypal_uses_conversion": paypal_uses_conversion,
-
         "checkout_prefill": checkout_prefill,
 
     }
@@ -1734,53 +1596,12 @@ def paypal_crear_orden(request):
 
 
 
-    moneda_paypal = getattr(settings, "PAYPAL_CURRENCY", "CLP")
-
-    paso_moneda = paypal_amount_step(moneda_paypal)
-
     try:
-
-        total = total.quantize(paso_moneda)
-
-    except InvalidOperation:
-
-        total = (total / paso_moneda).to_integral_value() * paso_moneda
+        total, order_total, conversion_rate, moneda_paypal, order_currency = _calcular_totales_paypal(total)
+    except PayPalError as exc:
+        return JsonResponse({"ok": False, "error": str(exc)}, status=400)
 
     print("[paypal_crear_orden] total_normalizado=", total, "moneda=", moneda_paypal)
-
-
-
-    order_currency = getattr(settings, "PAYPAL_ORDER_CURRENCY", moneda_paypal)
-
-    order_step = paypal_amount_step(order_currency)
-
-    conversion_rate = getattr(settings, "PAYPAL_CONVERSION_RATE", Decimal("1"))
-
-    order_total = total
-
-    if conversion_rate and conversion_rate != Decimal("1"):
-
-        if conversion_rate <= 0:
-
-            return JsonResponse({"ok": False, "error": "La tasa de conversión de PayPal es inválida."}, status=400)
-
-        try:
-
-            order_total = (total / conversion_rate).quantize(order_step)
-
-        except InvalidOperation:
-
-            order_total = (total / conversion_rate).quantize(order_step, rounding=ROUND_HALF_UP)
-
-    elif order_currency != moneda_paypal:
-
-        try:
-
-            order_total = total.quantize(order_step)
-
-        except InvalidOperation:
-
-            order_total = total.quantize(order_step, rounding=ROUND_HALF_UP)
 
 
 
@@ -1973,70 +1794,54 @@ def VistaTerminos(request):
 
 
 @require_http_methods(["POST"])
-
 def send_login_otp(request):
-
-    """Envía un código de verificación (6 dígitos) al correo del usuario indicado.
-
-
-
-    Acepta: username o email en POST.
-
-    Responde: {ok: True} o {error: "mensaje"}
-
-    """
+    """Envía un código de verificación (6 dígitos) al correo del usuario indicado."""
 
     ident = (request.POST.get("username") or request.POST.get("email") or "").strip()
 
     if not ident:
-
         return JsonResponse({"error": "Falta usuario o email"}, status=400)
 
     try:
-
         try:
-
             user = User.objects.get(username=ident)
-
         except User.DoesNotExist:
-
             user = User.objects.get(email__iexact=ident)
-
     except User.DoesNotExist:
-
         return JsonResponse({"error": "Usuario no encontrado"}, status=404)
 
     if not user.email:
-
         return JsonResponse({"error": "Este usuario no tiene email registrado"}, status=400)
 
     import random
 
     code = random.randint(100000, 999999)
-
     cache.set(f"login_otp:{user.id}", str(code), 300)
 
     asunto = "Código de verificación EpicAnimes"
-
     cuerpo = (
-
         f"Hola {user.username},\n\n"
-
         f"Tu código de verificación es: {code}.\n"
-
         "Es válido por 5 minutos. Si no solicitaste este código, ignora este mensaje.\n\n"
-
         "EpicAnimes"
-
     )
 
+    from_email = getattr(settings, "EMAIL_HOST_USER", None)
+    display_from = getattr(settings, "DEFAULT_FROM_EMAIL", None)
+    if from_email:
+        display_from = display_from or f"EpicAnimes <{from_email}>"
+
     try:
-
-        send_mail(asunto, cuerpo, settings.DEFAULT_FROM_EMAIL, [user.email], fail_silently=False)
-
-    except Exception:
-
-        return JsonResponse({"error": "No se pudo enviar el correo"}, status=500)
+        send_mail(
+            asunto,
+            cuerpo,
+            display_from or from_email or "no-reply@epicanimes.local",
+            [user.email],
+            fail_silently=False,
+        )
+    except Exception as exc:
+        logger.exception("Error enviando OTP a %s: %s", user.username, exc)
+        return JsonResponse({"error": "No se pudo enviar el correo. Intenta más tarde."}, status=500)
 
     return JsonResponse({"ok": True})
 
@@ -2171,11 +1976,8 @@ def VistaRegistro(request):
     if request.method == "POST":
 
         username = (request.POST.get("username") or "").strip()
-
         email = (request.POST.get("email") or "").strip()
-
         p1 = (request.POST.get("password1") or "").strip()
-
         p2 = (request.POST.get("password2") or "").strip()
 
 
@@ -2183,23 +1985,29 @@ def VistaRegistro(request):
         errores = []
 
         if not username:
-
             errores.append("El nombre de usuario es obligatorio.")
 
-        if not p1:
+        if not email:
+            errores.append("El correo electrónico es obligatorio.")
+        else:
+            try:
+                validate_email(email)
+            except ValidationError:
+                errores.append("Ingresa un correo electrónico válido.")
 
+        if email and User.objects.filter(email__iexact=email).exists():
+            errores.append("El correo electrónico ya está registrado.")
+
+        if not p1:
             errores.append("La contraseña es obligatoria.")
 
         if p1 and len(p1) < 6:
-
             errores.append("La contraseña debe tener al menos 6 caracteres.")
 
         if p1 != p2:
-
             errores.append("Las contraseñas no coinciden.")
 
         if User.objects.filter(username=username).exists():
-
             errores.append("El nombre de usuario ya existe.")
 
 
@@ -2258,57 +2066,14 @@ def _procesar_compra(request, referencia_pago=None, datos_cliente=None):
 
 
 
-    moneda_paypal = getattr(settings, "PAYPAL_CURRENCY", "CLP")
-
-    paso_moneda = paypal_amount_step(moneda_paypal)
-
-    order_currency = getattr(settings, "PAYPAL_ORDER_CURRENCY", moneda_paypal)
-
-    order_step = paypal_amount_step(order_currency)
-
-    conversion_rate = getattr(settings, "PAYPAL_CONVERSION_RATE", Decimal("1"))
-
-    order_total = Decimal("0")
-
     with transaction.atomic():
 
         lineas, total = _calcular_lineas_y_total(cart, lock=True)
 
         try:
-
-            total = total.quantize(paso_moneda)
-
-        except InvalidOperation:
-
-            # Si el precio tiene más decimales que la moneda soporta, forzamos el redondeo.
-
-            total = (total / paso_moneda).to_integral_value() * paso_moneda
-
-        order_total = total
-
-        if conversion_rate and conversion_rate != Decimal("1"):
-
-            if conversion_rate <= 0:
-
-                raise CarritoError("La tasa de conversión configurada para PayPal es inválida.")
-
-            try:
-
-                order_total = (total / conversion_rate).quantize(order_step)
-
-            except InvalidOperation:
-
-                order_total = (total / conversion_rate).quantize(order_step, rounding=ROUND_HALF_UP)
-
-        elif order_currency != moneda_paypal:
-
-            try:
-
-                order_total = total.quantize(order_step)
-
-            except InvalidOperation:
-
-                order_total = total.quantize(order_step, rounding=ROUND_HALF_UP)
+            total, order_total, _, moneda_paypal, order_currency = _calcular_totales_paypal(total)
+        except PayPalError as exc:
+            raise CarritoError(str(exc))
 
 
 
@@ -2482,38 +2247,7 @@ def VistaCarrito(request):
 
     puede_pagar = es_comprador and carrito_sin_fallos and bool(items)
 
-    paypal_order_currency = getattr(settings, "PAYPAL_ORDER_CURRENCY", getattr(settings, "PAYPAL_CURRENCY", "USD"))
-
-    paypal_conversion_rate = getattr(settings, "PAYPAL_CONVERSION_RATE", Decimal("1"))
-
-    try:
-
-        conversion_rate_display = format(paypal_conversion_rate, "f")
-
-        if "." in conversion_rate_display:
-            conversion_rate_display = conversion_rate_display.rstrip("0").rstrip(".")
-
-    except Exception:
-
-        conversion_rate_display = str(paypal_conversion_rate)
-
-    paypal_uses_conversion = (paypal_order_currency != getattr(settings, "PAYPAL_CURRENCY", "CLP") or paypal_conversion_rate != Decimal("1"))
-
-    paypal_order_estimate = None
-
-    if paypal_uses_conversion:
-
-        try:
-
-            if paypal_conversion_rate and paypal_conversion_rate != Decimal("0"):
-
-                order_step_ctx = paypal_amount_step(paypal_order_currency)
-
-                paypal_order_estimate = (total / paypal_conversion_rate).quantize(order_step_ctx)
-
-        except (InvalidOperation, ZeroDivisionError):
-
-            paypal_order_estimate = None
+    paypal_summary = paypal_conversion_summary(total)
 
     contexto = {
 
@@ -2525,16 +2259,7 @@ def VistaCarrito(request):
 
         "paypal_client_id": getattr(settings, "PAYPAL_CLIENT_ID", ""),
 
-        "paypal_currency": getattr(settings, "PAYPAL_CURRENCY", "CLP"),
-
-        "paypal_order_currency": paypal_order_currency,
-
-        "paypal_conversion_rate": paypal_conversion_rate,
-
-        "paypal_conversion_rate_display": conversion_rate_display,
-
-        "paypal_order_estimate": paypal_order_estimate,
-
+        **paypal_summary,
         "paypal_enabled": paypal_configurado,
 
         "paypal_error": paypal_error,
@@ -2546,11 +2271,7 @@ def VistaCarrito(request):
         "puede_comprar": es_comprador,
 
         "puede_pagar": puede_pagar,
-
         "puede_pagar_paypal": puede_pagar and paypal_configurado,
-
-        "paypal_uses_conversion": paypal_uses_conversion,
-
         "checkout_prefill": checkout_prefill,
 
     }
@@ -2861,51 +2582,12 @@ def paypal_crear_orden(request):
 
     moneda_paypal = getattr(settings, "PAYPAL_CURRENCY", "CLP")
 
-    paso_moneda = paypal_amount_step(moneda_paypal)
-
     try:
-
-        total = total.quantize(paso_moneda)
-
-    except InvalidOperation:
-
-        total = (total / paso_moneda).to_integral_value() * paso_moneda
+        total, order_total, conversion_rate, moneda_paypal, order_currency = _calcular_totales_paypal(total)
+    except PayPalError as exc:
+        return JsonResponse({"ok": False, "error": str(exc)}, status=400)
 
     print("[paypal_crear_orden] total_normalizado=", total, "moneda=", moneda_paypal)
-
-
-
-    order_currency = getattr(settings, "PAYPAL_ORDER_CURRENCY", moneda_paypal)
-
-    order_step = paypal_amount_step(order_currency)
-
-    conversion_rate = getattr(settings, "PAYPAL_CONVERSION_RATE", Decimal("1"))
-
-    order_total = total
-
-    if conversion_rate and conversion_rate != Decimal("1"):
-
-        if conversion_rate <= 0:
-
-            return JsonResponse({"ok": False, "error": "La tasa de conversión de PayPal es inválida."}, status=400)
-
-        try:
-
-            order_total = (total / conversion_rate).quantize(order_step)
-
-        except InvalidOperation:
-
-            order_total = (total / conversion_rate).quantize(order_step, rounding=ROUND_HALF_UP)
-
-    elif order_currency != moneda_paypal:
-
-        try:
-
-            order_total = total.quantize(order_step)
-
-        except InvalidOperation:
-
-            order_total = total.quantize(order_step, rounding=ROUND_HALF_UP)
 
 
 
@@ -6169,6 +5851,29 @@ class CoreLoginView(LoginView):
     authentication_form = TwoFactorLoginForm
 
 
+class CustomPasswordResetView(PasswordResetView):
+    template_name = "registration/password_reset_form.html"
+    email_template_name = "registration/password_reset_email.html"
+    subject_template_name = "registration/password_reset_subject.txt"
+    success_url = reverse_lazy("password_reset")
+
+    def form_valid(self, form):
+        email = form.cleaned_data.get("email", "").strip()
+        users = list(form.get_users(email))
+        if not users:
+            messages.error(self.request, "No encontramos una cuenta asociada a ese correo.")
+            form.add_error("email", "No encontramos este correo en EpicAnimes.")
+            return self.render_to_response(self.get_context_data(form=form))
+        response = super().form_valid(form)
+        messages.success(self.request, "Si el correo existe, te enviamos un enlace para restablecer tu contraseña.")
+        return response
+
+    def form_invalid(self, form):
+        if form.errors.get("email"):
+            messages.error(self.request, "Revisa el correo ingresado.")
+        return super().form_invalid(form)
+
+
 
 
 @login_required
@@ -6233,38 +5938,7 @@ def VistaCarrito(request):
 
     puede_pagar = es_comprador and carrito_sin_fallos and bool(items)
 
-    paypal_order_currency = getattr(settings, "PAYPAL_ORDER_CURRENCY", getattr(settings, "PAYPAL_CURRENCY", "USD"))
-
-    paypal_conversion_rate = getattr(settings, "PAYPAL_CONVERSION_RATE", Decimal("1"))
-
-    try:
-
-        conversion_rate_display = format(paypal_conversion_rate, "f")
-
-        if "." in conversion_rate_display:
-            conversion_rate_display = conversion_rate_display.rstrip("0").rstrip(".")
-
-    except Exception:
-
-        conversion_rate_display = str(paypal_conversion_rate)
-
-    paypal_uses_conversion = (paypal_order_currency != getattr(settings, "PAYPAL_CURRENCY", "CLP") or paypal_conversion_rate != Decimal("1"))
-
-    paypal_order_estimate = None
-
-    if paypal_uses_conversion:
-
-        try:
-
-            if paypal_conversion_rate and paypal_conversion_rate != Decimal("0"):
-
-                order_step_ctx = paypal_amount_step(paypal_order_currency)
-
-                paypal_order_estimate = (total / paypal_conversion_rate).quantize(order_step_ctx)
-
-        except (InvalidOperation, ZeroDivisionError):
-
-            paypal_order_estimate = None
+    paypal_summary = paypal_conversion_summary(total)
 
     contexto = {
 
@@ -6276,15 +5950,7 @@ def VistaCarrito(request):
 
         "paypal_client_id": getattr(settings, "PAYPAL_CLIENT_ID", ""),
 
-        "paypal_currency": getattr(settings, "PAYPAL_CURRENCY", "CLP"),
-
-        "paypal_order_currency": paypal_order_currency,
-
-        "paypal_conversion_rate": paypal_conversion_rate,
-
-        "paypal_conversion_rate_display": conversion_rate_display,
-
-        "paypal_order_estimate": paypal_order_estimate,
+        **paypal_summary,
 
         "paypal_enabled": paypal_configurado,
 
@@ -6299,8 +5965,6 @@ def VistaCarrito(request):
         "puede_pagar": puede_pagar,
 
         "puede_pagar_paypal": puede_pagar and paypal_configurado,
-
-        "paypal_uses_conversion": paypal_uses_conversion,
 
         "checkout_prefill": checkout_prefill,
 
@@ -6612,51 +6276,12 @@ def paypal_crear_orden(request):
 
     moneda_paypal = getattr(settings, "PAYPAL_CURRENCY", "CLP")
 
-    paso_moneda = paypal_amount_step(moneda_paypal)
-
     try:
-
-        total = total.quantize(paso_moneda)
-
-    except InvalidOperation:
-
-        total = (total / paso_moneda).to_integral_value() * paso_moneda
+        total, order_total, conversion_rate, moneda_paypal, order_currency = _calcular_totales_paypal(total)
+    except PayPalError as exc:
+        return JsonResponse({"ok": False, "error": str(exc)}, status=400)
 
     print("[paypal_crear_orden] total_normalizado=", total, "moneda=", moneda_paypal)
-
-
-
-    order_currency = getattr(settings, "PAYPAL_ORDER_CURRENCY", moneda_paypal)
-
-    order_step = paypal_amount_step(order_currency)
-
-    conversion_rate = getattr(settings, "PAYPAL_CONVERSION_RATE", Decimal("1"))
-
-    order_total = total
-
-    if conversion_rate and conversion_rate != Decimal("1"):
-
-        if conversion_rate <= 0:
-
-            return JsonResponse({"ok": False, "error": "La tasa de conversión de PayPal es inválida."}, status=400)
-
-        try:
-
-            order_total = (total / conversion_rate).quantize(order_step)
-
-        except InvalidOperation:
-
-            order_total = (total / conversion_rate).quantize(order_step, rounding=ROUND_HALF_UP)
-
-    elif order_currency != moneda_paypal:
-
-        try:
-
-            order_total = total.quantize(order_step)
-
-        except InvalidOperation:
-
-            order_total = total.quantize(order_step, rounding=ROUND_HALF_UP)
 
 
 

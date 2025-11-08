@@ -16,7 +16,7 @@
       <a class="logo" href="{% url 'index' %}"><i class="fas fa-hat-wizard"></i> <span class="logo-brand">EpicAnimes</span></a>
       <nav>
         <a class="active" data-section="bienvenido"><i class="fas fa-handshake"></i> Bienvenido, {{ request.user.username }}</a>
-        <a class="active" data-section="vendedores"><i class="fas fa-user-tie"></i> Gestión Vendedores</a>
+        <a data-section="vendedores"><i class="fas fa-user-tie"></i> Gestión Vendedores</a>
         <a data-section="usuarios_gestion"><i class="fas fa-users-cog"></i> Gestión Usuarios</a>
         <a data-section="stock"><i class="fas fa-warehouse"></i> Gestión de Stock</a>
         <a data-section="graficos"><i class="fas fa-chart-line"></i> Gráficos de Ventas</a>
@@ -57,7 +57,7 @@
             <a class="btn" href="#" onclick="document.querySelector('.sidebar nav a[data-section=\'stock\']').click(); return false;"><i class="fas fa-warehouse"></i> Stock</a>
             <a class="btn" href="#" onclick="document.querySelector('.sidebar nav a[data-section=\'graficos\']').click(); return false;"><i class="fas fa-chart-line"></i> Gráfico de Ventas</a>
             <a class="btn" href="#" onclick="document.querySelector('.sidebar nav a[data-section=\'postulaciones\']').click(); return false;"><i class="fas fa-user-plus"></i> Postulaciones</a>
-            <a class="btn" href="{% url 'index' %}" class="fas fa-sign-out-alt"></i> Salir</a>
+            <a class="btn" href="{% url 'index' %}"><i class="fas fa-sign-out-alt"></i> Salir</a>
           </div>
         </div>
         <br>
@@ -144,10 +144,19 @@
           <tbody></tbody>
         </table>
         <br>
+
+        <!-- Graficos de Vendedores  -->
         <div class="charts-wrapper vendor-charts">
-          <div class="chart-box small" id="vendorEstadoChartBox">
-            <h3 class="chart-title">Activos / Inactivos / Suspendidos</h3>
-            <canvas id="chartVendEstado"></canvas>
+          <div class="chart-box small vendor-estado-box" id="vendorEstadoChartBox">
+            <div class="chart-box__header">
+              <h3 class="chart-title">Activos / Inactivos / Suspendidos</h3>
+              <span class="chart-subtitle" id="vendorEstadoSummary"></span>
+            </div>
+            <div class="chart-box__canvas">
+              <canvas id="chartVendEstado"></canvas>
+              <p class="chart-placeholder" id="vendorEstadoPlaceholder">Sin datos para mostrar.</p>
+            </div>
+            <div class="vendor-estado-legend" id="vendorEstadoLegend"></div>
           </div>
           <div class="chart-box small vendor-top-chart" id="vendorTopChartBox" style="display:none;">
             <h3 class="chart-title">Top 3 productos de <span id="vendorTopName"></span></h3>
@@ -186,6 +195,27 @@
           </thead>
           <tbody></tbody>
         </table>
+        <br>
+
+        <!-- Graficos de Usuarios -->
+        <div class="charts-wrapper user-charts">
+          <div class="chart-box small user-estado-box" id="userEstadoChartBox">
+            <div class="chart-box__header">
+              <h3 class="chart-title">Activos / Inactivos / Suspendidos</h3>
+              <span class="chart-subtitle" id="userEstadoSummary"></span>
+            </div>
+            <div class="chart-box__canvas">
+              <canvas id="chartUserEstado"></canvas>
+              <p class="chart-placeholder" id="userEstadoPlaceholder">Sin datos para mostrar.</p>
+            </div>
+            <div class="user-estado-legend" id="userEstadoLegend"></div>
+          </div>
+          <div class="chart-box small user-top-chart" id="userTopChartBox" style="display:none;">
+            <h3 class="chart-title">Top 3 productos de <span id="userTopName"></span></h3>
+            <canvas id="chartUserTopProductos"></canvas>
+            <p class="chart-placeholder" id="userTopPlaceholder">Busca un usuario para ver sus productos destacados.</p>
+          </div>
+        </div>
       </section>
 
       <!-- Gestión Stock -->
@@ -422,7 +452,7 @@
   </div>
 
   <!-- Modal editar -->
-  <div class="modal" id="modalEditar">
+  <div class="modal" id="modalEditar" hidden>
     <div class="card">
       <h3>Editar Usuario</h3>
       <label>Nombre</label><input id="editNombre" type="text">
@@ -432,6 +462,37 @@
         <button class="btn" id="guardarEditar">Guardar</button>
         <button class="btn danger" id="eliminarUsuario">Eliminar</button>
         <button class="btn ghost" id="cancelarEditar">Cancelar</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal agregar -->
+  <div class="modal" id="modalAgregar" hidden>
+    <div class="card">
+      <h3 id="modalAgregarTitle">Agregar vendedor</h3>
+      <label for="newNombre">Nombre de usuario</label>
+      <input id="newNombre" type="text" placeholder="usuario_epic">
+      <label for="newEmail">Email</label>
+      <input id="newEmail" type="email" placeholder="correo@dominio.com">
+      <label for="newPass">Contraseña</label>
+      <input id="newPass" type="password" placeholder="********">
+      <div class="password-requirements" id="vendPasswordRequirements">
+        <p>Tu contraseña debe incluir:</p>
+        <ul>
+          <li data-req="length"><i class="fa fa-circle"></i> 8 caracteres o más</li>
+          <li data-req="upper"><i class="fa fa-circle"></i> 1 letra mayúscula</li>
+          <li data-req="lower"><i class="fa fa-circle"></i> 1 letra minúscula</li>
+          <li data-req="number"><i class="fa fa-circle"></i> 1 número</li>
+          <li data-req="symbol"><i class="fa fa-circle"></i> 1 símbolo (!@#$%^&*)</li>
+        </ul>
+      </div>
+      <label for="newPass2">Confirmar contraseña</label>
+      <input id="newPass2" type="password" placeholder="********">
+      <div class="match-indicator" id="vendPasswordMatch"></div>
+      <p class="form-error" id="modalAgregarError" aria-live="polite"></p>
+      <div class="actions">
+        <button class="btn primary" id="guardarNuevo" type="button">Guardar</button>
+        <button class="btn ghost" id="cancelarNuevo" type="button">Cancelar</button>
       </div>
     </div>
   </div>
@@ -724,6 +785,7 @@
 
     // ===== Fix: Guardar en modal Editar (fallback handler) =====
     try {
+      const enhancedReady = () => window.__dashboardAdminEnhancedReady === true;
       const getCookie = (name) => {
         const value = '; ' + document.cookie;
         const parts = value.split('; ' + name + '=');
@@ -738,12 +800,16 @@
           if (csrftoken) headers['X-CSRFToken'] = csrftoken;
         }
         const resp = await fetch(url, { method, headers, credentials: 'same-origin', body: body ? JSON.stringify(body) : null });
-        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        if (!resp.ok) {
+          const text = await resp.text().catch(() => '');
+          throw new Error(text || ('HTTP ' + resp.status));
+        }
         return resp.json().catch(() => ({}));
       };
 
-      // Captura el id/rol al abrir editar
+      // Captura el id/rol al abrir editar (solo si el script principal no está listo)
       document.addEventListener('click', (ev) => {
+        if (enhancedReady()) return;
         const btn = ev.target.closest('button[data-action="edit"]');
         if (!btn) return;
         const row = btn.closest('tr[data-id]');
@@ -754,9 +820,10 @@
         }
       }, true);
 
-      // Fallback guardar que no depende de variables internas
+      // Fallback guardar independiente
       const btnGuardar = document.getElementById('guardarEditar');
       btnGuardar?.addEventListener('click', async (ev) => {
+        if (enhancedReady()) return;
         try {
           ev.preventDefault();
           ev.stopImmediatePropagation();
@@ -766,18 +833,24 @@
           const username = (document.getElementById('editNombre')?.value || '').trim();
           const email = (document.getElementById('editEmail')?.value || '').trim();
           const pass = (document.getElementById('editPass')?.value || '').trim();
-                    const es_vendedor = (modal?.dataset.isVendor === '1');
+          const es_vendedor = (modal?.dataset.isVendor === '1');
           const body = { id, es_vendedor };
           if (username) body.username = username;
           body.email = email; // permite vacío
           if (pass) body.password = pass;
           await request('/api/admin/vendedores/', { method: 'PATCH', body });
-          // Cierra y recarga para reflejar cambios
           modal.style.display = 'none';
           setTimeout(() => location.reload(), 50);
         } catch (e) {
           console.error(e);
-          alert('No se pudo guardar.');
+          let msg = (e && e.message ? e.message : '').trim();
+          if (msg.startsWith('{')) {
+            try {
+              const parsed = JSON.parse(msg);
+              msg = parsed.error || parsed.detail || msg;
+            } catch (_) {}
+          }
+          alert(msg || 'No se pudo guardar.');
         }
       }, true);
     } catch (_) {}

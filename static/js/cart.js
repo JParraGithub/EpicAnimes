@@ -86,6 +86,18 @@
         clearCheckoutMessage();
       }
     }
+
+    const convertedEl = document.getElementById('paypalConvertedAmount');
+    if (convertedEl) {
+      const rate = parseFloat(convertedEl.dataset.rate || '0');
+      const targetCurrency = convertedEl.dataset.orderCurrency || state.paypalCurrency;
+      if (rate > 0) {
+        const converted = state.totalRaw / rate;
+        convertedEl.textContent = isZeroDecimalCurrency(targetCurrency)
+          ? Math.round(converted).toString()
+          : converted.toFixed(2);
+      }
+    }
   }
 
   function updateItemSubtotal(productId, subtotal) {

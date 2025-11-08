@@ -104,10 +104,18 @@
   });
 
   // Navegación por secciones
-  const sectionLinks = document.querySelectorAll(".nav-links a[data-nav-target]");
+  const navLinks = document.querySelectorAll(".nav-links a[data-nav-target]");
+  const sectionTriggers = document.querySelectorAll("[data-nav-target]");
   const sections = document.querySelectorAll("[data-section]");
 
-  const activateSection = (name) => {
+  const scrollToSection = (name) => {
+    const target = document.querySelector(`[data-section="${name}"]`);
+    if (target) {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
+  const activateSection = (name, { scroll = true } = {}) => {
     if (!name) return;
     let found = false;
     sections.forEach((section) => {
@@ -116,7 +124,7 @@
       if (match) found = true;
     });
     if (!found) return;
-    sectionLinks.forEach((link) => {
+    navLinks.forEach((link) => {
       link.classList.toggle("active", link.dataset.navTarget === name);
     });
     if (navGroup) navGroup.classList.remove("show");
@@ -124,15 +132,18 @@
     if (window.location.hash !== hash) {
       history.replaceState(null, "", hash);
     }
+    if (scroll) {
+      scrollToSection(name);
+    }
   };
 
-  sectionLinks.forEach((link) => {
+  sectionTriggers.forEach((link) => {
     link.addEventListener("click", (event) => {
       event.preventDefault();
-      activateSection(link.dataset.navTarget);
-    });
+    activateSection(link.dataset.navTarget);
+  });
   });
 
   const initialHash = window.location.hash.replace("#", "") || (sections[0] && sections[0].dataset.section);
-  activateSection(initialHash);
+  activateSection(initialHash, { scroll: false });
 })();

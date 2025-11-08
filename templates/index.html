@@ -12,7 +12,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800&family=Noto+Sans+JP:wght@400;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" crossorigin="anonymous" referrerpolicy="no-referrer">
   <link rel="stylesheet" href="{% static 'css/index.css' %}?v=4">
-  <link rel="stylesheet" href="{% static 'css/chatbot.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'css/chatbot.css' %}?v=2">
 </head>
 <body>
   <canvas id="stars" aria-hidden="true"></canvas>
@@ -36,52 +36,7 @@
     <circle cx="100" cy="100" r="90" fill="url(#g2)"></circle>
   </svg>
 
-  <header class="navbar glass">
-    <a class="brand" href="{% url 'index' %}">
-      <span class="logo">Epic<span>Animes</span></span>
-    </a>
-    <button class="nav-toggle" type="button" aria-label="Abrir menÃº">
-      <i class="fa fa-bars"></i>
-    </button>
-    <div class="nav-group" id="navGroup">
-      <nav class="nav-links" aria-label="Secciones de la pÃ¡gina">
-        <a href="#inicio" class="active" data-nav-target="inicio">Inicio</a>
-        <a href="#caracteristicas" data-nav-target="caracteristicas">Características</a>
-        <a href="#catalogo" data-nav-target="catalogo">Catálogo</a>
-        <a href="#kpi" data-nav-target="kpi">Indicadores</a>
-        <a href="#comunidad" data-nav-target="comunidad">Comunidad</a>
-        <a href="#contacto" data-nav-target="contacto">Contacto</a>
-        <a href="{% url 'sobre_nosotros' %}">Nosotros</a>
-      </nav>
-      <div class="nav-actions">
-        <a class="cart-pill" href="{% url 'carrito' %}" aria-label="Ir al carrito">
-          <i class="fa fa-shopping-cart"></i>
-          <span class="cart-count">{{ cart_count|default:0 }}</span>
-        </a>
-        <button id="themeToggle" class="theme-btn" type="button" aria-label="Cambiar tema">
-          <i class="fa fa-moon"></i>
-        </button>
-        {% if request.user.is_authenticated %}
-          <div class="user-pill">
-            <i class="fa fa-user"></i>
-            <span>{{ request.user.username }}</span>
-          </div>
-          {% if rol_usuario == "administrador" %}
-            <a class="btn btn--ghost small" href="{% url 'dashboard_administrador' %}">Panel admin</a>
-          {% elif rol_usuario == "vendedor" %}
-            <a class="btn btn--ghost small" href="{% url 'dashboard_vendedor' %}">Panel vendedor</a>
-          {% else %}
-            <a class="btn btn--ghost small" href="{% url 'carrito' %}">Ver carrito</a>
-          {% endif %}
-          <a class="btn btn--ghost small" href="{% url 'logout' %}">Salir</a>
-        {% else %}
-        <a class="btn btn--primary small" href="{% url 'login' %}">
-          <i class="fa fa-right-to-bracket"></i> Ingresar
-        </a>
-        {% endif %}
-      </div>
-    </div>
-  </header>
+  {% include 'includes/navbar.html' with nav_page='index' %}
 
   {% if messages %}
     <section class="messages" aria-live="polite">
@@ -115,7 +70,7 @@
   {% include 'includes/chatbot_popup.html' %}
 
   <script src="{% static 'js/index.js' %}?v=2" defer></script>
-  <script src="{% static 'js/chatbot.js' %}?v=1" defer></script>
+  <script src="{% static 'js/chatbot.js' %}?v=2" defer></script>
 </body>
 </html>
 

@@ -7,7 +7,7 @@
       nuestros dashboards de vendedores.
     </p>
     <div class="cta">
-      <a href="#catalogo" class="btn btn--primary">
+      <a href="#catalogo" class="btn btn--primary" data-nav-target="catalogo">
         <i class="fa fa-store"></i> Explorar catálogo
       </a>
       {% if request.user.is_authenticated %}
@@ -61,7 +61,7 @@
       {% endfor %}
     </div>
     <div class="card__footer">
-      <a class="btn btn--primary small" href="#catalogo">
+      <a class="btn btn--primary small" href="#catalogo" data-nav-target="catalogo">
         <i class="fa fa-bolt"></i> Ver catálogo
       </a>
       <a class="btn btn--ghost small" href="{% url 'sobre_nosotros' %}">

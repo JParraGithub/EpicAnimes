@@ -1,0 +1,50 @@
+{% load static %}
+<header class="navbar glass">
+  <a class="brand" href="{% url 'index' %}">
+    <span class="logo">Epic<span>Animes</span></span>
+  </a>
+  <button class="nav-toggle" type="button" aria-label="Abrir menú">
+    <i class="fa fa-bars"></i>
+  </button>
+  <div class="nav-group" id="navGroup">
+    <nav class="nav-links" aria-label="Secciones principales">
+      <a href="{% if nav_page == 'index' %}#inicio{% else %}{% url 'index' %}#inicio{% endif %}" data-nav-target="inicio">Inicio</a>
+      <a href="{% if nav_page == 'index' %}#caracteristicas{% else %}{% url 'index' %}#caracteristicas{% endif %}" data-nav-target="caracteristicas">Características</a>
+      <a href="{% if nav_page == 'index' %}#catalogo{% else %}{% url 'index' %}#catalogo{% endif %}" data-nav-target="catalogo">Catálogo</a>
+      <a href="{% if nav_page == 'index' %}#kpi{% else %}{% url 'index' %}#kpi{% endif %}" data-nav-target="kpi">Indicadores</a>
+      <a href="{% if nav_page == 'index' %}#comunidad{% else %}{% url 'index' %}#comunidad{% endif %}" data-nav-target="comunidad">Comunidad</a>
+      <a href="{% if nav_page == 'index' %}#contacto{% else %}{% url 'index' %}#contacto{% endif %}" data-nav-target="contacto">Contacto</a>
+      <a href="{% url 'sobre_nosotros' %}" class="{% if nav_page == 'sobre_nosotros' %}active{% endif %}">Nosotros</a>
+      <a href="{% url 'terminos' %}" class="{% if nav_page == 'terminos' %}active{% endif %}">Términos</a>
+    </nav>
+    <div class="nav-actions">
+      <a class="cart-pill" href="{% url 'carrito' %}" aria-label="Ir al carrito">
+        <i class="fa fa-shopping-cart"></i>
+        <span class="cart-count">{{ cart_count|default:0 }}</span>
+      </a>
+      {% if request.user.is_authenticated %}
+        <div class="user-pill">
+          <i class="fa fa-user"></i>
+          <span>{{ request.user.username }}</span>
+        </div>
+        {% if rol_usuario == "administrador" %}
+          <a class="btn btn--ghost small" href="{% url 'dashboard_administrador' %}">Panel admin</a>
+        {% elif rol_usuario == "vendedor" %}
+          <a class="btn btn--ghost small" href="{% url 'dashboard_vendedor' %}">Panel vendedor</a>
+        {% else %}
+          <a class="btn btn--ghost small" href="{% url 'carrito' %}">Ver carrito</a>
+        {% endif %}
+        <form method="post" action="{% url 'logout' %}" class="logout-form">
+          {% csrf_token %}
+          <button type="submit" class="btn btn--ghost small logout-button">Salir</button>
+        </form>
+      {% else %}
+        {% if not hide_login_cta %}
+          <a class="btn btn--primary small" href="{% url 'login' %}">
+            <i class="fa fa-right-to-bracket"></i> Ingresar
+          </a>
+        {% endif %}
+      {% endif %}
+    </div>
+  </div>
+</header>

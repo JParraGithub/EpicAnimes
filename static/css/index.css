@@ -60,6 +60,9 @@ img{max-width:100%;display:block}
 .nav-links a{padding:10px 12px; border-radius:12px; opacity:.9}
 .nav-links a.active,.nav-links a:hover{background:rgba(255,255,255,.06)}
 .nav-actions{display:flex; align-items:center; gap:10px; flex-wrap:wrap; justify-content:flex-end}
+.nav-actions .logout-form{margin:0}
+.nav-actions .logout-form button{background:none; border:none; padding:0}
+.nav-actions form{margin:0}
 .theme-btn{padding:10px 12px; border:1px solid rgba(255,255,255,.08); border-radius:12px; background:transparent; color:var(--text); cursor:pointer}
 .cart-pill,.user-pill{
   display:inline-flex; align-items:center; gap:6px;

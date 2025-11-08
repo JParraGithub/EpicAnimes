@@ -7,7 +7,11 @@
       <strong id="chatbotTitle">Asistente EpicChat</strong>
       <small class="text-muted d-block">Preguntas frecuentes y soporte rápido</small>
     </div>
-    <button id="chatbot-close" class="btn-close" aria-label="Cerrar"></button>
+    <div class="chatbot-header__actions">
+      <button id="chatbot-dismiss" class="chatbot-hide-btn chatbot-hide-btn--ghost" type="button" aria-label="Ocultar asistente">
+        <span aria-hidden="true">&times;</span>
+      </button>
+    </div>
   </header>
   <section id="chatbot-messages" class="chatbot-messages">
     <div class="chatbot-message bot">
@@ -15,12 +19,16 @@
     </div>
   </section>
   <section class="chatbot-suggestions" aria-label="Preguntas sugeridas">
-    <button class="chatbot-suggestion">¿Cuál es el horario de atención?</button>
-    <button class="chatbot-suggestion">¿Cuánto tarda el envío?</button>
-    <button class="chatbot-suggestion">¿Cómo seguimiento mi pedido?</button>
+    <button type="button" class="chatbot-suggestion">¿Cuál es el horario de atención?</button>
+    <button type="button" class="chatbot-suggestion">¿Cuánto tarda el envío?</button>
+    <button type="button" class="chatbot-suggestion">¿Cómo doy seguimiento a mi pedido?</button>
   </section>
   <form id="chatbot-form" class="chatbot-form" autocomplete="off">
     <input type="text" id="chatbot-input" name="message" class="form-control" placeholder="Escribe tu pregunta..." required>
     <button type="submit" class="btn btn-primary">Enviar</button>
   </form>
 </div>
+<button id="chatbot-reopen" class="chatbot-reopen" type="button" aria-label="Mostrar asistente" hidden>
+  <i class="fa fa-comments"></i>
+  <span>EpicChat</span>
+</button>

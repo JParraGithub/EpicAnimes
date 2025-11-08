@@ -1,11 +1,13 @@
 import logging
 import os
 from dataclasses import dataclass
-from decimal import Decimal, InvalidOperation
+from decimal import Decimal, InvalidOperation, ROUND_HALF_UP
 from typing import Optional, Tuple
 
 import requests
 from django.conf import settings
+from django.core.cache import cache
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
@@ -33,6 +35,128 @@ class PayPalError(Exception):
     """Error controlado para flujos PayPal."""
 
 
+def get_paypal_currencies() -> Tuple[str, str]:
+    tienda = getattr(settings, "PAYPAL_CURRENCY", "CLP").strip().upper() or "CLP"
+    orden = getattr(settings, "PAYPAL_ORDER_CURRENCY", tienda).strip().upper() or tienda
+    return tienda, orden
+
+
+def get_paypal_conversion_rate(force_refresh: bool = False) -> Tuple[Decimal, bool]:
+    """
+    Retorna la tasa configurada (moneda tienda por moneda de cobro) y un flag indicando
+    si se usó el valor de respaldo manual.
+    """
+    tienda, orden = get_paypal_currencies()
+    if tienda == orden:
+        return Decimal("1"), False
+
+    cache_key = f"paypal:conversion:{orden}:{tienda}"
+    if not force_refresh:
+        cached = cache.get(cache_key)
+        if cached is not None:
+            try:
+                rate = Decimal(str(cached))
+                if rate > 0:
+                    return rate, False
+            except (InvalidOperation, TypeError):
+                pass
+
+    url = getattr(settings, "PAYPAL_CONVERSION_API", "https://api.exchangerate.host/convert")
+    timeout = getattr(settings, "PAYPAL_CONVERSION_TIMEOUT", 8)
+    try:
+        response = requests.get(
+            url,
+            params={"from": orden, "to": tienda, "amount": 1},
+            timeout=timeout,
+        )
+        response.raise_for_status()
+        data = response.json()
+        result = data.get("result")
+        if result:
+            rate = Decimal(str(result))
+            if rate > 0:
+                cache.set(
+                    cache_key,
+                    str(rate),
+                    getattr(settings, "PAYPAL_CONVERSION_CACHE_SECONDS", 6 * 60 * 60),
+                )
+                return rate, False
+    except requests.RequestException as exc:
+        logger.warning("No se pudo actualizar la tasa PayPal %s/%s: %s", orden, tienda, exc)
+
+    fallback = getattr(settings, "PAYPAL_CONVERSION_RATE", Decimal("1"))
+    if fallback <= 0:
+        fallback = Decimal("1")
+    return fallback, True
+
+
+def paypal_conversion_summary(total: Decimal) -> dict:
+    moneda_tienda, moneda_orden = get_paypal_currencies()
+    conversion_rate, used_fallback = get_paypal_conversion_rate()
+    uses_conversion = (moneda_orden != moneda_tienda) or (conversion_rate != Decimal("1"))
+    order_estimate = None
+    if uses_conversion and conversion_rate not in (None, Decimal("0")):
+        try:
+            order_step_ctx = paypal_amount_step(moneda_orden)
+            order_estimate = (total / conversion_rate).quantize(order_step_ctx)
+        except (InvalidOperation, ZeroDivisionError):
+            order_estimate = None
+    try:
+        rate_display = format(conversion_rate, "f")
+        if "." in rate_display:
+            rate_display = rate_display.rstrip("0").rstrip(".")
+    except Exception:
+        rate_display = str(conversion_rate)
+    return {
+        "paypal_currency": moneda_tienda,
+        "paypal_order_currency": moneda_orden,
+        "paypal_conversion_rate": conversion_rate,
+        "paypal_conversion_rate_display": rate_display,
+        "paypal_order_estimate": order_estimate,
+        "paypal_uses_conversion": uses_conversion,
+        "paypal_conversion_is_fallback": used_fallback,
+    }
+
+
+def normalize_paypal_totals(
+    total: Decimal,
+    *,
+    conversion_rate: Optional[Decimal] = None,
+    store_currency: Optional[str] = None,
+    order_currency: Optional[str] = None,
+) -> Tuple[Decimal, Decimal]:
+    """
+    Normaliza el total según la moneda de la tienda y calcula el monto que se enviará a PayPal.
+    Devuelve una tupla (total_normalizado_tienda, total_en_moneda_paypal).
+    """
+    tienda = (store_currency or getattr(settings, "PAYPAL_CURRENCY", "CLP")).upper()
+    orden = (order_currency or getattr(settings, "PAYPAL_ORDER_CURRENCY", tienda)).upper()
+    conversion_rate = conversion_rate if conversion_rate is not None else get_paypal_conversion_rate()[0]
+
+    paso_tienda = paypal_amount_step(tienda)
+    try:
+        total_normalizado = total.quantize(paso_tienda)
+    except InvalidOperation:
+        total_normalizado = (total / paso_tienda).to_integral_value() * paso_tienda
+
+    total_paypal = total_normalizado
+    paso_orden = paypal_amount_step(orden)
+    if conversion_rate and conversion_rate != Decimal("1"):
+        if conversion_rate <= 0:
+            raise PayPalError("La tasa de conversión configurada para PayPal es inválida.")
+        try:
+            total_paypal = (total_normalizado / conversion_rate).quantize(paso_orden)
+        except InvalidOperation:
+            total_paypal = (total_normalizado / conversion_rate).quantize(paso_orden, rounding=ROUND_HALF_UP)
+    elif orden != tienda:
+        try:
+            total_paypal = total_normalizado.quantize(paso_orden)
+        except InvalidOperation:
+            total_paypal = total_normalizado.quantize(paso_orden, rounding=ROUND_HALF_UP)
+
+    return total_normalizado, total_paypal
+
+
 @dataclass
 class PayPalCaptureResult:
     order_id: str
@@ -40,6 +164,26 @@ class PayPalCaptureResult:
     capture_id: Optional[str]
     amount: Optional[Decimal]
     currency: Optional[str]
+
+
+def _ensure_paypal_credentials() -> Tuple[str, str]:
+    client_id = (getattr(settings, "PAYPAL_CLIENT_ID", "") or "").strip()
+    client_secret = (getattr(settings, "PAYPAL_CLIENT_SECRET", "") or "").strip()
+    if client_id and client_secret:
+        return client_id, client_secret
+
+    base_dir = getattr(settings, "BASE_DIR", None)
+    if base_dir:
+        env_path = os.path.join(base_dir, ".env")
+        if os.path.exists(env_path):
+            load_dotenv(env_path, override=True)
+            client_id = (os.environ.get("PAYPAL_CLIENT_ID", "") or "").strip()
+            client_secret = (os.environ.get("PAYPAL_CLIENT_SECRET", "") or "").strip()
+            if client_id and client_secret:
+                settings.PAYPAL_CLIENT_ID = client_id
+                settings.PAYPAL_CLIENT_SECRET = client_secret
+                return client_id, client_secret
+    return client_id, client_secret
 
 
 def _paypal_api_base() -> str:
@@ -53,8 +197,7 @@ def _paypal_api_base() -> str:
 
 
 def paypal_is_configured() -> Tuple[bool, Optional[str]]:
-    client_id = (getattr(settings, "PAYPAL_CLIENT_ID", "") or "").strip()
-    client_secret = (getattr(settings, "PAYPAL_CLIENT_SECRET", "") or "").strip()
+    client_id, client_secret = _ensure_paypal_credentials()
     if not client_id or not client_secret:
         return (
             False,
@@ -86,8 +229,7 @@ def _paypal_access_token() -> str:
     ok, error = paypal_is_configured()
     if not ok:
         raise PayPalError(error or "Configuración PayPal incompleta.")
-    client_id = settings.PAYPAL_CLIENT_ID.strip()
-    client_secret = settings.PAYPAL_CLIENT_SECRET.strip()
+    client_id, client_secret = _ensure_paypal_credentials()
     url = f"{_paypal_api_base()}/v1/oauth2/token"
     try:
         response = requests.post(
@@ -126,52 +268,46 @@ def paypal_create_order(
     reference: Optional[str] = None,
 ) -> str:
     """
-    Crea una orden en PayPal y devuelve su ID.
+    amount debe ir en la moneda de cobro (USD, CLP, etc).
     """
     if amount <= 0:
-        raise PayPalError("El total a pagar debe ser mayor a cero.")
+        raise PayPalError("El monto debe ser mayor a cero.")
 
     token = _paypal_access_token()
     base = _paypal_api_base()
-    create_url = f"{base}/v2/checkout/orders"
-
-    amount_value = paypal_format_amount(amount, currency)
-    purchase_unit: dict = {
-        "amount": {
-            "currency_code": (currency or "USD").upper(),
-            "value": amount_value,
-        }
-    }
-    if reference:
-        purchase_unit["reference_id"] = reference[:127]
-    if shipping:
-        purchase_unit["shipping"] = shipping
-
+    create_order_url = f"{base}/v2/checkout/orders"
     body = {
         "intent": "CAPTURE",
-        "purchase_units": [purchase_unit],
-        "application_context": {
-            "shipping_preference": "SET_PROVIDED_ADDRESS" if shipping else "NO_SHIPPING",
-            "user_action": "PAY_NOW",
-        },
+        "purchase_units": [
+            {
+                "reference_id": reference or "ORD-EPIC",
+                "amount": {
+                    "currency_code": currency,
+                    "value": paypal_format_amount(amount, currency),
+                },
+            }
+        ],
     }
 
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Prefer": "return=representation",
-    }
+    if shipping:
+        body["purchase_units"][0]["shipping"] = shipping
+
     try:
-        response = requests.post(create_url, json=body, headers=headers, timeout=20)
+        response = requests.post(
+            create_order_url,
+            json=body,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type": "application/json",
+            },
+            timeout=20,
+        )
     except requests.RequestException as exc:
         logger.exception("Error al crear orden PayPal: %s", exc)
-        raise PayPalError("No se pudo crear la orden de pago en PayPal.") from exc
+        raise PayPalError("No se pudo crear la orden en PayPal.") from exc
 
-    if response.status_code not in (201,):
-        logger.error(
-            "Fallo al crear orden PayPal (%s): %s", response.status_code, response.text
-        )
+    if response.status_code not in (200, 201):
+        logger.error("PayPal rechazó la orden (%s): %s", response.status_code, response.text)
         raise PayPalError("PayPal rechazó la creación de la orden.")
 
     data = response.json()

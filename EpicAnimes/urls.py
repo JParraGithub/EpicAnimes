@@ -22,6 +22,7 @@ from core.views import (
     # Redirección inteligente post-login
     redireccion_usuario,
     CoreLoginView,
+    CustomPasswordResetView,
     send_login_otp,
 
     # APIs VENDEDOR
@@ -66,6 +67,7 @@ urlpatterns = [
     # Auth (login/logout/password reset, etc.)
     path('accounts/login/', CoreLoginView.as_view(), name='login'),
     path('accounts/send-otp/', send_login_otp, name='send_login_otp'),
+    path('accounts/password_reset/', CustomPasswordResetView.as_view(), name='password_reset'),
     path('accounts/', include('django.contrib.auth.urls')),
     path('accounts/signup/', VistaRegistro, name='signup'),
 

@@ -1,0 +1,44 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}EpicAnimes | Cuenta{% endblock %}</title>
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="{% static 'css/index.css' %}?v=4">
+  <link rel="stylesheet" href="{% static 'css/auth.css' %}?v=2">
+  {% block extra_head %}{% endblock %}
+</head>
+<body class="auth-body">
+  <canvas id="stars" aria-hidden="true"></canvas>
+  {% include 'includes/navbar.html' with nav_page='auth' hide_login_cta=True %}
+
+  <main class="auth-shell">
+    {% if messages %}
+      <div class="auth-messages">
+        {% for message in messages %}
+          <div class="message message--{{ message.tags|default:'info' }}">
+            <i class="fa fa-circle-info"></i>
+            <span>{{ message }}</span>
+          </div>
+        {% endfor %}
+      </div>
+    {% endif %}
+
+    {% block auth_content %}{% endblock %}
+  </main>
+
+  <footer class="auth-footer glass">
+    <p>&copy; <span id="year"></span> EpicAnimes — Comunidad y e-commerce otaku.</p>
+  </footer>
+
+  <script src="{% static 'js/stars-bg.js' %}" defer></script>
+  <script src="{% static 'js/page-shared.js' %}" defer></script>
+  {% block extra_js %}{% endblock %}
+</body>
+</html>
