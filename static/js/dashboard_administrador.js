@@ -1258,6 +1258,12 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
 
+  const updateStockSelectColor = () => {
+    if (!stockSelect) return;
+    const hasSelection = (stockSelect.value || '') !== '';
+    stockSelect.style.color = hasSelection ? '#050912' : '#f4f6ff';
+  };
+
   async function loadStock() {
     if (!stockBody) return;
     setStateRow(stockBody, 8, 'Cargando stock...');
@@ -1271,6 +1277,7 @@ document.addEventListener('DOMContentLoaded', () => {
           .concat(vendorNames.map((name) => `<option value="${sanitize(name)}">${sanitize(name)}</option>`))
           .join('');
         if (current && vendorNames.includes(current)) stockSelect.value = current;
+        updateStockSelectColor();
       }
       const search = (stockBuscar?.value || '').toLowerCase().trim();
       const vendorFilter = stockSelect?.value || '';
@@ -1645,11 +1652,16 @@ const openEditModal = (row) => {
   });
 
   stockBtnRecargar?.addEventListener('click', loadStock);
-  stockSelect?.addEventListener('change', loadStock);
+  stockSelect?.addEventListener('change', () => {
+    updateStockSelectColor();
+    loadStock();
+  });
   stockBuscar?.addEventListener('input', () => {
     clearTimeout(stockBuscar._t);
     stockBuscar._t = setTimeout(loadStock, 200);
   });
+
+  updateStockSelectColor();
 
   stockBody?.addEventListener('click', (ev) => {
     const row = ev.target.closest('tr[data-id]');

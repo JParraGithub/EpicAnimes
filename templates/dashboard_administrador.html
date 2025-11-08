@@ -222,66 +222,81 @@
       <section id="stock" class="section-group">
         <h2><i class="fas fa-warehouse"></i> Control de Stock por Vendedor</h2>
         <p class="hint">Filtra por nombre de vendedor para ver y editar su stock.</p>
-        <div class="stock-toolbar">
-          <input type="text" id="stock_buscar" placeholder="Buscar vendedor..." class="select-control" style="max-width:220px">
-          <select id="stock_vendedor" class="select-control"></select>
-          <button class="btn" id="stock_btnRecargar">Actualizar</button>
+        <div class="stock-card">
+          <div class="stock-toolbar">
+            <input type="text" id="stock_buscar" placeholder="Buscar vendedor..." class="select-control" style="max-width:220px">
+            <select id="stock_vendedor" class="select-control"></select>
+            <button class="btn" id="stock_btnRecargar">Actualizar</button>
+          </div>
+          <div class="table-wrapper">
+            <table class="data-table" id="tablaStock">  
+              <thead>
+                <tr>
+                  <th>ID</th>
+                  <th>Vendedor</th>
+                  <th>Nombre</th>
+                  <th>Tipo</th>
+                  <th>Imagen</th>
+                  <th>Descripción</th>
+                  <th>Stock</th>
+                  <th>Crítico</th>
+                </tr>
+              </thead>
+              <tbody></tbody>
+            </table>
+          </div>
         </div>
-        <table class="data-table" id="tablaStock">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Vendedor</th>
-              <th>Nombre</th>
-              <th>Tipo</th>
-              <th>Imagen</th>
-              <th>Descripción</th>
-              <th>Stock</th>
-              <th>Crítico</th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-        </table>
 
-        <h3 style="margin:16px 0 8px">Editar Productos</h3>
-        <form id="formEditarProductoAdmin" enctype="multipart/form-data" class="stock-edit-form">
-          <div class="stock-edit-grid">
-            <label>
-              <span>ID</span>
-              <input type="text" id="a_id" name="id" readonly>
-            </label>
-            <label>
-              <span>Vendedor</span>
-              <input type="text" id="a_vendedor" readonly>
-            </label>
-            <label>
-              <span>Nombre producto</span>
-              <input type="text" id="a_nombre" name="nombre" placeholder="Nombre">
-            </label>
-            <label>
-              <span>Tipo producto</span>
-              <input type="text" id="a_categoria" name="categoria" placeholder="Tipo o categoría">
-            </label>
-            <label class="full">
-              <span>Descripción</span>
-              <textarea id="a_descripcion" name="descripcion" rows="2" placeholder="Descripción"></textarea>
-            </label>
-            <label>
-              <span>Stock</span>
-              <input type="number" id="a_existencias" name="existencias" min="0" placeholder="0">
-            </label>
-            <label class="full">
-              <span>Imagen</span>
-              <input type="file" id="a_imagen" name="imagen" accept="image/*">
-              <img id="a_imagen_preview" alt="Preview" style="display:none">
-            </label>
+        <div class="stock-card stock-edit-card">
+          <div class="stock-edit-header">
+            <h3><i class="fas fa-pen-alt"></i> Editar Productos</h3>
+            <p id="stockEditStatus" class="stock-edit-status">Selecciona un producto de la tabla para editarlo.</p>
           </div>
-          <div class="stock-edit-actions">
-            <button type="button" class="btn ghost" id="btnAccCancelar">Cancelar</button>
-            <button type="button" class="btn danger" id="btnAccEliminar">Eliminar</button>
-            <button type="submit" class="btn success" id="btnAccGuardar">Guardar</button>
-          </div>
-        </form>
+          <form id="formEditarProductoAdmin" enctype="multipart/form-data" class="stock-edit-form">
+            <div class="stock-edit-grid">
+              <label>
+                <span>ID</span>
+                <input type="text" id="a_id" name="id" readonly>
+              </label>
+              <label>
+                <span>Vendedor</span>
+                <input type="text" id="a_vendedor" readonly>
+              </label>
+              <label>
+                <span>Nombre producto</span>
+                <input type="text" id="a_nombre" name="nombre" placeholder="Nombre">
+              </label>
+              <label>
+                <span>Tipo producto</span>
+                <input type="text" id="a_categoria" name="categoria" placeholder="Tipo o categoría">
+              </label>
+              <label class="full">
+                <span>Descripción</span>
+                <textarea id="a_descripcion" name="descripcion" rows="2" placeholder="Descripción"></textarea>
+              </label>
+              <label>
+                <span>Stock</span>
+                <input type="number" id="a_existencias" name="existencias" min="0" placeholder="0">
+              </label>
+              <label class="full">
+                <span>Imagen</span>
+                <input type="file" id="a_imagen" name="imagen" accept="image/*">
+                <img id="a_imagen_preview"
+                     alt="Preview"
+                     style="display:none"
+                     width="180"
+                     height="180"
+                     loading="lazy"
+                     decoding="async">
+              </label>
+            </div>
+            <div class="stock-edit-actions">
+              <button type="button" class="btn ghost" id="btnAccCancelar">Cancelar</button>
+              <button type="button" class="btn danger" id="btnAccEliminar">Eliminar</button>
+              <button type="submit" class="btn success" id="btnAccGuardar">Guardar</button>
+            </div>
+          </form>
+        </div>
       </section>
 
       <!-- Gráficos -->
@@ -342,31 +357,33 @@
         <h2><i class="fas fa-chart-bar"></i> Gráficos de Ventas por Usuario</h2>
         <div class="charts-wrapper">
           <div class="chart-box large" id="ventasPorUsuarioBox">
-            <div class="table-tools" style="margin-bottom:8px;">
-              <div class="left">
-                <label style="color:#cfe6ff; font-size:14px; margin-right:8px;">Rango:</label>
-                <div class="chip-group" data-select="#selectVentasUsuariosRangeInner" style="display:inline-flex; gap:8px; flex-wrap:wrap;">
-                  <a href="#" class="btn ghost" data-value="30">30 días</a>
-                  <a href="#" class="btn ghost" data-value="90">90 días</a>
-                  <a href="#" class="btn ghost" data-value="180">180 días</a>
-                  <a href="#" class="btn ghost" data-value="365">365 días</a>
+            <div class="ventas-usuarios-filters">
+              <div class="ventas-usuarios-filter-block">
+                <div class="ventas-usuarios-filter-row">
+                  <label for="selectVentasUsuariosRangeInner" class="chart-filter-label">Rango:</label>
+                  <div class="chip-group" data-select="#selectVentasUsuariosRangeInner">
+                    <a href="#" class="btn ghost" data-value="30">30 días</a>
+                    <a href="#" class="btn ghost" data-value="90">90 días</a>
+                    <a href="#" class="btn ghost" data-value="180">180 días</a>
+                    <a href="#" class="btn ghost" data-value="365">365 días</a>
+                  </div>
+                  <select id="selectVentasUsuariosRangeInner" style="display:none;">
+                    <option value="30">Ultimos 30 dias</option>
+                    <option value="90">Ultimos 90 dias</option>
+                    <option value="180">Ultimos 180 dias</option>
+                    <option value="365">Ultimos 365 dias</option>
+                  </select>
                 </div>
-                <select id="selectVentasUsuariosRangeInner" style="display:none;">
-                  <option value="30">Ultimos 30 dias</option>
-                  <option value="90">Ultimos 90 dias</option>
-                  <option value="180">Ultimos 180 dias</option>
-                  <option value="365">Ultimos 365 dias</option>
-                </select>
-                <div class="filters-top">
+                <div class="ventas-usuarios-filter-row">
                   <label for="selectVentasUsuariosTop" class="chart-filter-label">Top:</label>
-                  <div class="chip-group" data-select="#selectVentasUsuariosTop" style="display:inline-flex; gap:8px; flex-wrap:wrap;">
+                  <div class="chip-group" data-select="#selectVentasUsuariosTop">
                     <a href="#" class="btn ghost" data-value="5">5</a>
                     <a href="#" class="btn ghost" data-value="10">10</a>
                     <a href="#" class="btn ghost" data-value="15">15</a>
                     <a href="#" class="btn ghost" data-value="25">25</a>
                     <a href="#" class="btn ghost" data-value="50">50</a>
                   </div>
-                  <select id="selectVentasUsuariosTop" class="chart-filter-select" style="height: 4vh; display:none;">
+                  <select id="selectVentasUsuariosTop" class="chart-filter-select" style="display:none;">
                     <option value="5">Top 5</option>
                     <option value="10" selected>Top 10</option>
                     <option value="15">Top 15</option>
@@ -374,26 +391,30 @@
                     <option value="50">Top 50</option>
                   </select>
                 </div>
+              </div>
+              <div class="ventas-usuarios-filter-block ventas-usuarios-filter-block--compact">
+                <div class="ventas-usuarios-filter-row presence-row">
+                  <button type="button" id="toggleVentasUsuariosPresence" class="chart-toggle chart-toggle--compact" data-active="0" aria-pressed="false">
+                    <span class="chart-toggle__icon chart-toggle__icon--on"><i class="fas fa-check"></i></span>
+                    <span class="chart-toggle__icon chart-toggle__icon--off"><i class="fas fa-times"></i></span>
+                    <span class="chart-toggle__label">Sin presencia</span>
+                  </button>
                 </div>
-              <div class="right chart-filter-group">
-                <button type="button" id="toggleVentasUsuariosPresence" class="chart-toggle chart-toggle--compact" data-active="0" aria-pressed="false">
-                  <span class="chart-toggle__icon chart-toggle__icon--on"><i class="fas fa-check"></i></span>
-                  <span class="chart-toggle__icon chart-toggle__icon--off"><i class="fas fa-times"></i></span>
-                  <span class="chart-toggle__label">Sin presencia</span>
-                </button>
-                <label for="selectVentasUsuariosWindow" class="chart-filter-label">Ventana:</label>
-                <div class="chip-group" data-select="#selectVentasUsuariosWindow" style="display:inline-flex; gap:8px; flex-wrap:wrap;">
-                  <a href="#" class="btn ghost" data-value="180">180 s</a>
-                  <a href="#" class="btn ghost" data-value="300">300 s</a>
-                  <a href="#" class="btn ghost" data-value="600">600 s</a>
-                  <a href="#" class="btn ghost" data-value="900">900 s</a>
+                <div class="ventas-usuarios-filter-row">
+                  <label for="selectVentasUsuariosWindow" class="chart-filter-label">Ventana:</label>
+                  <div class="chip-group" data-select="#selectVentasUsuariosWindow">
+                    <a href="#" class="btn ghost" data-value="180">180 s</a>
+                    <a href="#" class="btn ghost" data-value="300">300 s</a>
+                    <a href="#" class="btn ghost" data-value="600">600 s</a>
+                    <a href="#" class="btn ghost" data-value="900">900 s</a>
+                  </div>
+                  <select id="selectVentasUsuariosWindow" class="chart-filter-select" disabled style="display:none;">
+                    <option value="180">180 s</option>
+                    <option value="300">300 s</option>
+                    <option value="600">600 s</option>
+                    <option value="900">900 s</option>
+                  </select>
                 </div>
-                <select id="selectVentasUsuariosWindow" class="chart-filter-select" disabled style="height: 4vh; display:none;">
-                  <option value="180">180 s</option>
-                  <option value="300">300 s</option>
-                  <option value="600">600 s</option>
-                  <option value="900">900 s</option>
-                </select>
               </div>
             </div>
             <div id="ventasPorUsuarioLayout" class="ventas-usuarios-layout">
