@@ -7,23 +7,28 @@
   const onReady = () => {
     if (!window.Chart) return;
 
+    // Selector para Gráfico de Barras - Gráfico de Lineas - Gráfico Circular
     const rangeSel = document.getElementById('ventasRangeSel');
     const lineaTitleSel = document.getElementById('tituloLineaSel');
     const barrasTitleSel = document.getElementById('tituloBarrasSel');
     const pieTitleSel = document.getElementById('tituloPieSel');
 
+    // Selector para Gráfico de Barras - Gráfico de Lineas - Gráfico Circular
     const lineaTitleText = document.getElementById('tituloLineaText');
     const barrasTitleText = document.getElementById('tituloBarrasText');
     const pieTitleText = document.getElementById('tituloPieText');
 
+    // Selector para Gráfico de Barras - Gráfico de Lineas - Gráfico Circular
     const ctxLinea = document.getElementById('chartVendedorLinea');
     const ctxBarras = document.getElementById('chartVendedorBarras');
     const ctxPie = document.getElementById('chartVendedorPie');
 
+    // Selector para Gráfico de Barras - Gráfico de Lineas - Gráfico Circular
     const cardLinea = document.getElementById('cardGrafLinea');
     const cardBarras = document.getElementById('cardGrafBarras');
     const cardPie = document.getElementById('cardGrafPie');
 
+    // Selector para Gráfico de Barras - Gráfico de Lineas - Gráfico Circular
     const btnLinea = document.getElementById('btnGrafLinea');
     const btnBarras = document.getElementById('btnGrafBarras');
     const btnPie = document.getElementById('btnGrafPie');
@@ -50,6 +55,7 @@
 
     const titleWithRange = (base, days) => `${base} (${days} días)`;
 
+    // Construcicón Gráfico de Líneas
     const buildLinea = (labels, data, days) => {
       const prev = charts.linea && (Chart.getChart(charts.linea) || charts.linea);
       if (prev && prev.destroy) prev.destroy();
@@ -86,6 +92,7 @@
       if (lineaTitleText) lineaTitleText.textContent = titleWithRange(lineaTitleSel?.value || 'Ingresos diarios', days);
     };
 
+    // Construcción Gráfico de Barras
     const buildBarras = (labels, data, days) => {
       const prev = charts.barras && (Chart.getChart(charts.barras) || charts.barras);
       if (prev && prev.destroy) prev.destroy();
@@ -120,6 +127,7 @@
       if (barrasTitleText) barrasTitleText.textContent = titleWithRange(barrasTitleSel?.value || 'Comparativa de ventas', days);
     };
 
+    // Construcicón Gráfico Circular
     const buildPie = (labels, data, days) => {
       const prev = charts.pie && (Chart.getChart(charts.pie) || charts.pie);
       if (prev && prev.destroy) prev.destroy();

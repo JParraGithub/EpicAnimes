@@ -50,6 +50,8 @@
       borderDash: [6, 3],
     },
   };
+
+  // Creacción Gráfico de Líneas
   const anySeriesActive = () => SERIES_ORDER.some((key) => toggleState[key]);
   const updateToggleUI = () => {
     if (!toggleContainer) return;

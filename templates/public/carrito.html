@@ -119,7 +119,7 @@
               </div>
               <div class="col-12">
                 <label class="form-label" for="checkoutNotas">Notas para el envío (opcional)</label>
-                <textarea id="checkoutNotas" name="notas" class="form-control" rows="3" placeholder="Ej: dejar en conserjería" {% if not puede_comprar %}disabled{% endif %}>{{ checkout_prefill.notas }}</textarea>
+                <textarea id="checkoutNotas" name="notas" class="form-control custom-placeholde" rows="3" placeholder="Ej: dejar en conserjería" {% if not puede_comprar %}disabled{% endif %}>{{ checkout_prefill.notas }}</textarea>
               </div>
             </div>
           </form>
@@ -127,7 +127,7 @@
 
         <div class="glass cart-summary-card">
           <h4>Resumen</h4>
-          <p class="text-muted small">Total a pagar</p>
+          <p class="text-white small">Total a pagar</p>
           <p class="fs-3 fw-semibold mb-1">$ <span id="cartTotalAmount" data-total-raw="{{ total }}">{{ total|floatformat:0 }}</span></p>
 
           {% if paypal_uses_conversion %}
@@ -170,10 +170,9 @@
             >
               <i class="fa fa-magic"></i>    Comprar (ficticia) 
             </button>
-            <small class="text-muted text-small d-block">Úsalo para probar flujos internos sin pagar.</small>
           {% endif %}
 
-          <p class="text-muted small mb-0">Tus datos se almacenan de forma segura y solo se usan para este despacho.</p>
+          <p class="text-white small mb-0">Tus datos se almacenan de forma segura y solo se usan para este despacho.</p>
         </div>
       </section>
     {% else %}

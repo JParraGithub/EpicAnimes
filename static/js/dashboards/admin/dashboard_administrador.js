@@ -528,6 +528,8 @@ document.addEventListener('DOMContentLoaded', () => {
       renderVendorLegend(counts, total);
       const dataset = [counts.activos, counts.inactivos, counts.suspendidos];
       if (!chartVendEstado) {
+
+        // Construcción Gráfico Circular para estado de vendedores
         chartVendEstado = new Chart(chartVendEstadoCtx, {
           type: 'doughnut',
           data: {
@@ -645,6 +647,8 @@ document.addEventListener('DOMContentLoaded', () => {
       renderUserLegend(counts, total);
       const dataset = [counts.activos, counts.inactivos, counts.suspendidos];
       if (!chartUserEstado) {
+
+        // Construcción Gráfico Circular para estado de usuarios
         chartUserEstado = new Chart(chartUserEstadoCtx, {
           type: 'doughnut',
           data: {
@@ -910,6 +914,8 @@ document.addEventListener('DOMContentLoaded', () => {
       const labels = datasets.map((d, i) => d.label || `Producto ${i + 1}`);
       const totals = datasets.map((d) => (Array.isArray(d.data) ? d.data.reduce((acc, val) => acc + Number(val || 0), 0) : 0));
       chartVendTop = destroyChart(chartVendTop);
+
+      // Construcción Gráfico de Barras para productos destacados
       chartVendTop = new Chart(chartVendTopCtx, {
         type: 'bar',
         data: {
@@ -1099,6 +1105,8 @@ document.addEventListener('DOMContentLoaded', () => {
   const renderVentasUsuariosChart = (labels, values) => {
     if (!ventasUsuariosCtx) return;
     chartVentasUsuarios = destroyChart(chartVentasUsuarios);
+
+    // Construcción Gráfico de Barras para ventas por usuarios
     chartVentasUsuarios = new Chart(ventasUsuariosCtx, {
       type: 'bar',
       data: {
@@ -1934,6 +1942,8 @@ const openEditModal = (row) => {
   const renderEstadoGlobalChart = (labels, values) => {
     if (!estadoGlobalCtx) return;
     chartEstadoGlobal = destroyChart(chartEstadoGlobal);
+    
+    // Construcción Gráfico Circular para estado global
     chartEstadoGlobal = new Chart(estadoGlobalCtx, {
       type: 'doughnut',
       data: {

@@ -4,6 +4,7 @@ body.cart-body{
   color:var(--text);
 }
 
+
 .cart-page{
   width:min(1200px,calc(100% - 32px));
   margin:90px auto 70px;
@@ -289,3 +290,7 @@ body.cart-body{
     grid-template-columns:1fr;
   }
 }
+
+.custom-placeholder::placeholder {
+    color: #ffffff; /* color de texto del placeholder */
+  }
