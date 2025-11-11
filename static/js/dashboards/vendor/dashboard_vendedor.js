@@ -330,7 +330,11 @@ document.addEventListener("DOMContentLoaded", () => {
       // KPIs
       setText('.kpi-card:nth-of-type(1) .value', `$${Number(data.ventas_hoy || 0).toLocaleString("es-CL")}`);
       setText('.kpi-card:nth-of-type(2) .value', `$${Number(data.ticket_promedio || 0).toLocaleString("es-CL")}`);
-      setText('.kpi-card:nth-of-type(3) .value', `${Number(data.tasa_conversion || 0).toLocaleString("es-CL")}%`);
+      const ventas7 = Array.isArray(data.data) ? data.data.reduce((a, b) => a + (Number(b || 0)), 0) : 0;
+      setText('.kpi-card:nth-of-type(3) .value', `$${Number(ventas7 || 0).toLocaleString("es-CL")}`);
+      // Cambia el titulo de la tercera tarjeta si el HTML aun no esta actualizado
+      const kpi3Title = document.querySelector('.kpi-card:nth-of-type(3) .title');
+      if (kpi3Title) kpi3Title.textContent = 'Ventas ultimos 7 dias';
 
       // GrÃ¡fico tendencia: centrado y grande
       if (chartCanvas) {

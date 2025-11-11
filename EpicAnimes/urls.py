@@ -26,7 +26,7 @@ from core.views import (
     # Declara endpoints dedicados a los vendedores.
     api_vendedor_resumen,
     api_vendedor_resumen_ext,
-    api_vendedor_stock_resumen,
+    # api_vendedor_stock_resumen,  # reemplazado por version separada
     api_vendedor_producto_detalle,
 
     # Declara endpoints administrativos para gráficos, stock y CRUD.
@@ -56,6 +56,10 @@ from core.views import (
     export_vendedor_inventario_xlsx,
     export_vendedor_ventas_xlsx,
     api_vendedor_importar_excel,
+)
+from core.stock_alerts import (
+    api_vendedor_stock_resumen as api_vendedor_stock_resumen_new,
+    api_vendedor_stock_set_umbral,
 )
 
 urlpatterns = [
@@ -96,7 +100,8 @@ urlpatterns = [
     # Endpoints disponibles para vendedores.
     path('api/vendedor/resumen/', api_vendedor_resumen, name='api_vendedor_resumen'),
     path('api/vendedor/resumen_ext/', api_vendedor_resumen_ext, name='api_vendedor_resumen_ext'),
-    path('api/vendedor/stock/', api_vendedor_stock_resumen, name='api_vendedor_stock_resumen'),
+    path('api/vendedor/stock/', api_vendedor_stock_resumen_new, name='api_vendedor_stock_resumen'),
+    path('api/vendedor/stock/umbral/', api_vendedor_stock_set_umbral, name='api_vendedor_stock_set_umbral'),
     path('api/vendedor/export/ventas.csv', export_vendedor_ventas_csv, name='export_vendedor_ventas_csv'),
     path('api/vendedor/export/ventas.xlsx', export_vendedor_ventas_xlsx, name='export_vendedor_ventas_xlsx'),
     path('api/vendedor/producto/<int:pk>/', api_vendedor_producto_detalle, name='api_vendedor_producto_detalle'),

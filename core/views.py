@@ -3637,179 +3637,6 @@ def api_vendedor_resumen_ext(request):
 
 
 
-
-@login_required
-
-@require_http_methods(["GET"])
-
-def api_vendedor_stock_resumen(request):
-
-    """
-
-    KPIs y tabla de productos críticos (existencias <= 5) visibles para el vendedor.
-
-    Si quieres filtrarlo por productos que haya vendido, añade la lógica similar a admin (?vendedor_id).
-
-    """
-
-    vendedor = Vendedor.objects.filter(usuario=request.user).first()
-
-    productos = Producto.objects.none()
-
-    if vendedor:
-
-        productos = (
-
-            Producto.objects
-
-            .filter(vendedor=vendedor)
-
-            .only("id", "nombre", "categoria", "existencias", "precio")
-
-        )
-
-
-
-    valor_total = 0
-
-    criticos = 0
-
-    items_bajos = []
-
-    for p in productos:
-
-        e = int(p.existencias or 0)
-
-        valor_total += float(p.precio or 0) * e
-
-        if e <= 5:
-
-            criticos += 1
-
-            items_bajos.append({
-
-                "id": p.id,
-
-                "nombre": p.nombre,
-
-                "categoria": p.categoria,
-
-                "existencias": e,
-
-            })
-
-
-
-    items_bajos.sort(key=lambda x: (x["existencias"], x["nombre"]))
-
-    items = items_bajos[:50]
-
-
-
-                                                                  
-
-                                                                                         
-
-                                                                                               
-
-    if vendedor and criticos > 0:
-        try:
-            user = getattr(vendedor, "usuario", None)
-            email = getattr(user, "email", "") or ""
-            
-            if email:
-                key = f"stock_alert_ts_{vendedor.id}"
-                now = timezone.now()
-                last_iso = request.session.get(key)
-                can_send = True
-
-                if last_iso:
-                    try:
-                        last_dt = timezone.datetime.fromisoformat(last_iso)
-                        if timezone.is_naive(last_dt):
-                            last_dt = timezone.make_aware(last_dt, timezone=timezone.get_current_timezone())
-                        can_send = (now - last_dt) >= timedelta(hours=12)
-                    except Exception:
-                        can_send = True
-
-                if can_send:
-                                     
-                    asunto = "🔔 Alerta de stock bajo — EpicAnimes"
-
-                                                         
-                                                                                   
-                    try:
-                        nombre = (user.get_full_name() or "").strip()
-                    except Exception:
-                        nombre = ""
-                    if not nombre:
-                        nombre = (getattr(user, "first_name", "") or "").strip() or user.username
-                    lineas = [
-                        f"Hola {nombre},",
-                        "",
-                        "Detectamos que algunos de tus productos presentan *stock crítico* (≤ 5 unidades):",
-                        "",
-                    ]
-
-                    for it in items_bajos[:20]:
-                        lineas.append(f"• {it['nombre']}  —  Categoría: {it['categoria'] or '-'}  —  Stock: {it['existencias']}")
-
-                    if len(items_bajos) > 20:
-                        lineas.append(f"... y {len(items_bajos) - 20} productos más.")
-
-                    lineas += [
-                        "",
-                        "📦 Te recomendamos revisar tu inventario lo antes posible.",
-                        "",
-                        "Accede a tu panel para reponerlos:",
-                    ]
-
-                    try:
-                        url = request.build_absolute_uri(reverse('dashboard_vendedor'))
-                    except Exception:
-                        url = "http://127.0.0.1:8000/dashboard_vendedor/"
-
-                    lineas.append(url)
-                    lineas += [
-                        "",
-                        "────────────────────────",
-                        "       EpicAnimes       ",
-                        "────────────────────────",
-                    ]
-
-                    cuerpo = "\n".join(lineas)
-
-                                      
-                    try:
-                        send_mail(
-                            asunto,
-                            cuerpo,
-                            settings.DEFAULT_FROM_EMAIL,
-                            [email],
-                            fail_silently=True
-                        )
-                                         
-                        request.session[key] = now.isoformat()
-                        request.session.modified = True
-
-                    except Exception as e:
-                        print(f"Error al enviar correo: {e}")
-
-        except Exception as e:
-            print(f"Error general en alerta de stock: {e}")
-
-                  
-    return JsonResponse({
-        "valor_total": float(valor_total),
-        "criticos": int(criticos),
-        "items_bajos": items,
-        "items": items,
-    })
-
-
-
-
-
 @login_required
 
 @require_http_methods(["GET"])
@@ -7305,179 +7132,6 @@ def api_vendedor_resumen(request):
 
 
 
-
-@login_required
-
-@require_http_methods(["GET"])
-
-def api_vendedor_stock_resumen(request):
-
-    """
-
-    KPIs y tabla de productos críticos (existencias <= 5) visibles para el vendedor.
-
-    Si quieres filtrarlo por productos que haya vendido, añade la lógica similar a admin (?vendedor_id).
-
-    """
-
-    vendedor = Vendedor.objects.filter(usuario=request.user).first()
-
-    productos = Producto.objects.none()
-
-    if vendedor:
-
-        productos = (
-
-            Producto.objects
-
-            .filter(vendedor=vendedor)
-
-            .only("id", "nombre", "categoria", "existencias", "precio")
-
-        )
-
-
-
-    valor_total = 0
-
-    criticos = 0
-
-    items_bajos = []
-
-    for p in productos:
-
-        e = int(p.existencias or 0)
-
-        valor_total += float(p.precio or 0) * e
-
-        if e <= 5:
-
-            criticos += 1
-
-            items_bajos.append({
-
-                "id": p.id,
-
-                "nombre": p.nombre,
-
-                "categoria": p.categoria,
-
-                "existencias": e,
-
-            })
-
-
-
-    items_bajos.sort(key=lambda x: (x["existencias"], x["nombre"]))
-
-    items = items_bajos[:50]
-
-
-
-                                                                  
-
-                                                                                         
-
-                                                                                               
-
-    if vendedor and criticos > 0:
-        try:
-            user = getattr(vendedor, "usuario", None)
-            email = getattr(user, "email", "") or ""
-            
-            if email:
-                key = f"stock_alert_ts_{vendedor.id}"
-                now = timezone.now()
-                last_iso = request.session.get(key)
-                can_send = True
-
-                if last_iso:
-                    try:
-                        last_dt = timezone.datetime.fromisoformat(last_iso)
-                        if timezone.is_naive(last_dt):
-                            last_dt = timezone.make_aware(last_dt, timezone=timezone.get_current_timezone())
-                        can_send = (now - last_dt) >= timedelta(hours=12)
-                    except Exception:
-                        can_send = True
-
-                if can_send:
-                                     
-                    asunto = "🔔 Alerta de stock bajo — EpicAnimes"
-
-                                                         
-                                                                                   
-                    try:
-                        nombre = (user.get_full_name() or "").strip()
-                    except Exception:
-                        nombre = ""
-                    if not nombre:
-                        nombre = (getattr(user, "first_name", "") or "").strip() or user.username
-                    lineas = [
-                        f"Hola {nombre},",
-                        "",
-                        "Detectamos que algunos de tus productos presentan *stock crítico* (≤ 5 unidades):",
-                        "",
-                    ]
-
-                    for it in items_bajos[:20]:
-                        lineas.append(f"• {it['nombre']}  —  Categoría: {it['categoria'] or '-'}  —  Stock: {it['existencias']}")
-
-                    if len(items_bajos) > 20:
-                        lineas.append(f"... y {len(items_bajos) - 20} productos más.")
-
-                    lineas += [
-                        "",
-                        "📦 Te recomendamos revisar tu inventario lo antes posible.",
-                        "",
-                        "Accede a tu panel para reponerlos:",
-                    ]
-
-                    try:
-                        url = request.build_absolute_uri(reverse('dashboard_vendedor'))
-                    except Exception:
-                        url = "http://127.0.0.1:8000/dashboard_vendedor/"
-
-                    lineas.append(url)
-                    lineas += [
-                        "",
-                        "────────────────────────",
-                        "       EpicAnimes       ",
-                        "────────────────────────",
-                    ]
-
-                    cuerpo = "\n".join(lineas)
-
-                                      
-                    try:
-                        send_mail(
-                            asunto,
-                            cuerpo,
-                            settings.DEFAULT_FROM_EMAIL,
-                            [email],
-                            fail_silently=True
-                        )
-                                         
-                        request.session[key] = now.isoformat()
-                        request.session.modified = True
-
-                    except Exception as e:
-                        print(f"Error al enviar correo: {e}")
-
-        except Exception as e:
-            print(f"Error general en alerta de stock: {e}")
-
-                  
-    return JsonResponse({
-        "valor_total": float(valor_total),
-        "criticos": int(criticos),
-        "items_bajos": items,
-        "items": items,
-    })
-
-
-
-
-
 @login_required
 
 @require_http_methods(["GET"])
@@ -9804,148 +9458,73 @@ def export_vendedor_ventas_xlsx(request):
                             
 
 @login_required
-
 @require_http_methods(["POST"])
-
 def api_vendedor_importar_excel(request):
-
     """Procesa archivos Excel para crear o actualizar productos."""
     if not request.user.groups.filter(name="Vendedores").exists():
-
         return HttpResponseForbidden("Solo vendedores")
-
     try:
-
         vend = Vendedor.objects.get(usuario=request.user)
-
     except Vendedor.DoesNotExist:
-
         return HttpResponseForbidden("Perfil vendedor requerido")
-
     f = request.FILES.get('file')
-
     if not f:
-
         return HttpResponseBadRequest("Archivo Excel requerido")
-
     try:
-
         from openpyxl import load_workbook
-
         from io import BytesIO
-
         content = f.read()
-
         wb = load_workbook(filename=BytesIO(content), data_only=True)
-
         ws = wb.active
-
         rows = list(ws.iter_rows(values_only=True))
-
         if not rows:
-
             return JsonResponse({"ok": True, "creados": 0})
-
         def _norm(s):
-
             if not s:
-
                 return ''
-
             import unicodedata
-
             s = str(s)
-
             s = ''.join(c for c in unicodedata.normalize('NFKD', s) if not unicodedata.combining(c))
-
             return s.strip()
-
         headers = [(_norm(h) or '').lower().replace(' ', '_') for h in (rows[0] or [])]
-
         created = 0
-
         for r in rows[1:]:
-
             row = {}
-
             for idx, val in enumerate(r or []):
-
                 key = headers[idx] if idx < len(headers) else f'col_{idx}'
-
                 row[key] = val if val is not None else ''
-
             nombre = _norm(row.get('nombre') or row.get('name'))
-
             if not nombre:
-
                 continue
-
             marca = _norm(row.get('marca'))
-
             calidad = _norm(row.get('calidad'))
-
             categoria = _norm(row.get('categoria') or row.get('categoria_'))
-
             try:
-
                 precio = Decimal(str(row.get('precio') or '0')).quantize(Decimal('0.01'))
-
             except Exception:
-
                 precio = Decimal('0.00')
-
             try:
-
                 exist = int(str(row.get('existencias') or row.get('stock') or '0'))
-
             except Exception:
-
                 exist = 0
-
             fecha_raw = str(row.get('fecha_ingreso') or '')
-
             fecha = parse_date(fecha_raw) or timezone.localdate()
-
             desc = str(row.get('descripcion') or '')
-
             Producto.objects.create(
-
                 vendedor=vend,
-
                 nombre=nombre,
-
                 marca=marca,
-
                 calidad=calidad,
-
                 categoria=categoria,
-
                 precio=precio,
-
                 existencias=exist,
-
                 fecha_ingreso=fecha,
-
                 descripcion=desc,
-
             )
-
             created += 1
-
         return JsonResponse({"ok": True, "creados": created})
-
     except Exception:
-
         return HttpResponseBadRequest("No se pudo procesar el Excel")
-
-
-
-
-
-
-
-
-
 
 
 
@@ -9961,7 +9540,7 @@ class CoreLoginView(LoginView):
 
 
 
-
+# GRÁFICO DE BARRA HORIZONTAL EN DASHBOARD ADMINISTRADOR
 @login_required
 @require_http_methods(["GET"])
 def api_admin_ventas_por_usuario(request):
