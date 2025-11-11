@@ -73,6 +73,14 @@ document.addEventListener('DOMContentLoaded', function() {
         number: /\d/.test(value),
         symbol: /[^A-Za-z0-9]/.test(value),
       }).every(Boolean);
+      // Validación de términos y condiciones
+      const terms = document.getElementById('id_terms');
+      if (terms && !terms.checked) {
+        event.preventDefault();
+        form.classList.add('form-invalid');
+        terms.focus();
+        return;
+      }
       if (!allMet || value !== pwd2.value) {
         event.preventDefault();
         form.classList.add('form-invalid');
@@ -80,3 +88,4 @@ document.addEventListener('DOMContentLoaded', function() {
     });
   }
 });
+

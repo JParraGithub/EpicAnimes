@@ -1262,7 +1262,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const updateStockSelectColor = () => {
     if (!stockSelect) return;
     const hasSelection = (stockSelect.value || '') !== '';
-    stockSelect.style.color = hasSelection ? '#050912' : '#f4f6ff';
+    // Cuando no hay selección ("Todos los vendedores"), usar el acento rojo
+    stockSelect.style.color = hasSelection ? 'var(--text)' : 'var(--accent)';
+    stockSelect.style.fontWeight = hasSelection ? '500' : '700';
   };
 
   async function loadStock() {
@@ -1274,7 +1276,7 @@ document.addEventListener('DOMContentLoaded', () => {
       const vendorNames = Array.from(new Set(items.map((i) => i.vendedor || 'N/D'))).sort((a, b) => a.localeCompare(b));
       if (stockSelect) {
         const current = stockSelect.value;
-        stockSelect.innerHTML = ['<option value="">Todos los vendedores</option>']
+        stockSelect.innerHTML = ['<option value="" data-default="1">Todos los vendedores</option>']
           .concat(vendorNames.map((name) => `<option value="${sanitize(name)}">${sanitize(name)}</option>`))
           .join('');
         if (current && vendorNames.includes(current)) stockSelect.value = current;

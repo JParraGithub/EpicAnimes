@@ -33,6 +33,27 @@ body {
   letter-spacing: 0.01em;
 }
 
+/* Fondo temático sutil para el dashboard del administrador */
+body.theme-cool::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  background:
+    /* Estrellas/neón azules */
+    radial-gradient(1px 1px at 20px 30px, rgba(98, 179, 255, 0.18), transparent 55%),
+    radial-gradient(1px 1px at 80px 90px, rgba(98, 179, 255, 0.14), transparent 55%),
+    radial-gradient(1px 1px at 140px 50px, rgba(98, 179, 255, 0.16), transparent 55%),
+    /* Chispas rojizas del acento */
+    radial-gradient(1px 1px at 60px 120px, rgba(233, 69, 96, 0.14), transparent 55%),
+    radial-gradient(1px 1px at 160px 30px, rgba(233, 69, 96, 0.12), transparent 55%),
+    /* Halo suave para profundidad */
+    radial-gradient(600px 280px at 85% -20%, rgba(98, 179, 255, 0.07), transparent 60%);
+  background-size: 180px 180px, 220px 220px, 260px 260px, 200px 200px, 260px 260px, auto;
+  mix-blend-mode: screen;
+}
+
 .dashboard-container {
   display: grid;
   grid-template-columns: 260px 1fr;
@@ -194,6 +215,34 @@ body {
   background: var(--surface);
   border: 1px solid var(--border);
   box-shadow: 0 18px 40px rgba(0, 0, 0, 0.4);
+}
+
+/* Contenedores de gráficos (aplican fondo y bordes a las secciones de charts) */
+.charts-wrapper {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+}
+
+.chart-box {
+  background: linear-gradient(180deg, rgba(7, 11, 26, 0.92), rgba(10, 17, 33, 0.9));
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 18px;
+  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.45);
+}
+
+.chart-box.large { padding: 22px; }
+.chart-box.small { padding: 18px; }
+
+.chart-box .chart-title {
+  margin: 0 0 8px;
+  font-size: 18px;
+  color: var(--text);
+}
+
+.chart-box__canvas {
+  position: relative;
 }
 
 .chart-card h3 {
@@ -851,6 +900,12 @@ body {
   min-height: 44px;
 }
 
+/* Opción por defecto del select de vendedores en rojo (acento) */
+#stock #stock_vendedor option[data-default="1"] {
+  color: var(--accent);
+  font-weight: 700;
+}
+
 #stock .stock-toolbar input[type="text"]:focus,
 #stock .stock-toolbar .select-control:focus {
   outline: none;
@@ -1027,3 +1082,24 @@ body {
     padding: 20px;
   }
 }
+
+/* --- Toast (notificaciones flotantes) --- */
+.toast {
+  position: fixed;
+  left: 20px;
+  bottom: 20px;
+  z-index: 1500;
+  display: none;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: rgba(5, 8, 18, 0.88);
+  color: #e7ecf5;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 14px 32px rgba(0, 0, 0, 0.45);
+  font-size: 14px;
+}
+
+.toast.show { display: inline-flex; align-items: center; gap: 8px; }
+.toast.success { border-color: rgba(68, 217, 166, 0.45); box-shadow: 0 14px 34px rgba(68, 217, 166, 0.22); }
+.toast.error { border-color: rgba(233, 69, 96, 0.45); box-shadow: 0 14px 34px rgba(233, 69, 96, 0.22); }
+.toast.info { border-color: rgba(98, 179, 255, 0.4); box-shadow: 0 14px 34px rgba(98, 179, 255, 0.2); }

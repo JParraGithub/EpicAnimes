@@ -29,7 +29,7 @@ from django.contrib.auth.views import LoginView, PasswordResetView
 
 from django.core.exceptions import ValidationError
 
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives, send_mail
 
 from django.core.validators import validate_email
 
@@ -59,12 +59,14 @@ from django.http import (
 from django.shortcuts import render, redirect, get_object_or_404
 
 from django.templatetags.static import static
+from django.template.loader import render_to_string
 
 from django.urls import reverse, reverse_lazy
 
 from django.utils import timezone
 
 from django.utils.dateparse import parse_date
+from django.utils.html import strip_tags
 
 from django.utils.http import url_has_allowed_host_and_scheme
 
@@ -192,15 +194,27 @@ def newsletter_suscribir(request):
 
     if created:
         asunto = "¡Bienvenido a la comunidad EpicAnimes!"
-        cuerpo = (
-            "Hola, Bienvenido a EpicAnimes!"
-            "Gracias por suscribirte a las noticias de EpicAnimes. "
-            "A partir de ahora recibirás novedades, preventas y recomendaciones exclusivas.\n\n"
-            "Si en algún momento deseas darte de baja, solo responde a este correo y lo gestionaremos.\n\n"
-            "¡Nos vemos en la próxima aventura otaku!"
+        segment_label = segmento_value or "la comunidad EpicAnimes"
+        cta_url = request.build_absolute_uri(reverse("contacto"))
+        html_body = render_to_string(
+            "emails/newsletter_welcome.html",
+            {
+                "cta_url": cta_url,
+                "segment_label": segment_label,
+                "support_email": settings.EMAIL_HOST_USER,
+            },
         )
+        text_body = strip_tags(html_body)
+
         try:
-            send_mail(asunto, cuerpo, settings.DEFAULT_FROM_EMAIL, [email], fail_silently=False)
+            message = EmailMultiAlternatives(
+                subject=asunto,
+                body=text_body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[email],
+            )
+            message.attach_alternative(html_body, "text/html")
+            message.send(fail_silently=False)
             return _respond("success", "Gracias por unirte a la comunidad. Te enviamos un correo de bienvenida.", created=True)
         except Exception:
             logger.exception("Fallo al enviar correo de bienvenida a %s", email)
@@ -1037,6 +1051,22 @@ def VistaIndex(request):
 
                     user.groups.add(grupo_clientes)
 
+                # Notificar por correo que la cuenta fue creada
+                try:
+                    if user.email:
+                        asunto = "¡Bienvenido a EpicAnimes!"
+                        cta_url = request.build_absolute_uri(reverse("index"))
+                        html_body = render_to_string(
+                            "emails/signup_welcome.html",
+                            {"username": user.username, "cta_url": cta_url, "support_email": settings.EMAIL_HOST_USER},
+                        )
+                        text_body = strip_tags(html_body)
+                        msg = EmailMultiAlternatives(asunto, text_body, settings.DEFAULT_FROM_EMAIL, [user.email])
+                        msg.attach_alternative(html_body, "text/html")
+                        msg.send(fail_silently=True)
+                except Exception:
+                    logger.exception("No se pudo enviar correo de bienvenida tras registro (user=%s)", user.id)
+
                 auth_login(request, user)
 
                 messages.success(request, "Cuenta creada. Ya puedes comprar.")
@@ -1223,6 +1253,7 @@ def VistaRegistro(request):
         email = (request.POST.get("email") or "").strip()
         p1 = (request.POST.get("password1") or "").strip()
         p2 = (request.POST.get("password2") or "").strip()
+        terms_raw = (request.POST.get("terms") or "").strip().lower()
 
 
 
@@ -1254,6 +1285,10 @@ def VistaRegistro(request):
         if User.objects.filter(username=username).exists():
             errores.append("El nombre de usuario ya existe.")
 
+        # Validación de aceptación de términos
+        if terms_raw not in ("on", "1", "true", "sí", "si"): 
+            errores.append("Debes aceptar los términos y condiciones.")
+
 
 
         if errores:
@@ -1281,6 +1316,22 @@ def VistaRegistro(request):
         grupo_clientes, _ = Group.objects.get_or_create(name="Clientes")
 
         u.groups.add(grupo_clientes)
+
+        # Enviar correo de bienvenida al registrarse por este flujo simple
+        try:
+            if email:
+                asunto = "¡Bienvenido a EpicAnimes!"
+                cta_url = request.build_absolute_uri(reverse("login"))
+                html_body = render_to_string(
+                    "emails/signup_welcome.html",
+                    {"username": username, "cta_url": cta_url, "support_email": settings.EMAIL_HOST_USER},
+                )
+                text_body = strip_tags(html_body)
+                msg = EmailMultiAlternatives(asunto, text_body, settings.DEFAULT_FROM_EMAIL, [email])
+                msg.attach_alternative(html_body, "text/html")
+                msg.send(fail_silently=True)
+        except Exception:
+            logger.exception("No se pudo enviar correo de bienvenida (signup simple) a %s", email)
 
         messages.success(request, "Cuenta creada. Ahora puedes iniciar sesión.")
 

@@ -24,7 +24,7 @@
       {% endif %}
 
       <div class="auth-form-panel">
-        <form id="signupForm" method="post" class="auth-form" novalidate>
+        <form id="signupForm" method="post" class="auth-form" novalidate data-loader-skip="true">
           {% csrf_token %}
           <div class="form-field">
             <label for="id_username"><i class="fa fa-user"></i> Usuario</label>

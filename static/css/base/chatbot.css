@@ -4,12 +4,14 @@
   --chatbot-accent-2: #ff7a89;
   --chatbot-dark: rgba(5, 8, 21, 0.92);
   --chatbot-border: rgba(255, 255, 255, 0.08);
+  /* Separación desde el borde inferior para el botón flotante */
+  --chatbot-bottom: 96px;
 }
 
 .chatbot-bubble {
   position: fixed;
   right: 24px;
-  bottom: 24px;
+  bottom: var(--chatbot-bottom);
   width: 64px;
   height: 64px;
   border-radius: 50%;
@@ -38,7 +40,7 @@
 .chatbot-panel {
   position: fixed;
   right: 24px;
-  bottom: 96px;
+  bottom: calc(var(--chatbot-bottom) + 72px);
   width: 340px;
   max-height: 520px;
   background: var(--chatbot-dark);
@@ -227,7 +229,7 @@
 .chatbot-reopen{
   position:fixed;
   right:24px;
-  bottom:24px;
+  bottom:var(--chatbot-bottom);
   display:flex;
   align-items:center;
   gap:8px;
@@ -268,15 +270,16 @@
     right: 12px;
     left: 12px;
     width: auto;
+    bottom: 144px; /* mantener separación sobre el botón en mobile */
   }
 
   .chatbot-bubble {
     right: 16px;
-    bottom: 16px;
+    bottom: 72px;
   }
 
   .chatbot-reopen{
     right:16px;
-    bottom:16px;
+    bottom:72px;
   }
 }

@@ -149,4 +149,29 @@
     const initialHash = window.location.hash.replace("#", "") || (sections[0] && sections[0].dataset.section);
     activateSection(initialHash, { scroll: false });
   }
+
+  // Asegura que el token CSRF coincida con la cookie (evita 403 tras login/logout)
+  const getCookie = (name) => {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return decodeURIComponent(parts.pop().split(';').shift());
+    return null;
+  };
+
+  const syncCsrfForForms = () => {
+    const cookieToken = getCookie('csrftoken');
+    if (!cookieToken) return;
+    document.querySelectorAll('form[action$="/newsletter/suscribir/"]').forEach((form) => {
+      let input = form.querySelector('input[name="csrfmiddlewaretoken"]');
+      if (!input) {
+        input = document.createElement('input');
+        input.type = 'hidden';
+        input.name = 'csrfmiddlewaretoken';
+        form.prepend(input);
+      }
+      input.value = cookieToken;
+      form.addEventListener('submit', () => { input.value = getCookie('csrftoken') || input.value; });
+    });
+  };
+  syncCsrfForForms();
 })();

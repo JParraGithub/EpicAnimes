@@ -66,6 +66,14 @@ class RegistroClienteForm(UserCreationForm):
         label="Correo electrónico",
     )
 
+    # Aceptación de términos obligatoria para completar el registro
+    terms = forms.BooleanField(
+        required=True,
+        label="Acepto los términos y condiciones",
+        error_messages={"required": "Debes aceptar los términos y condiciones."},
+        widget=forms.CheckboxInput(),
+    )
+
     class Meta:
         model = User
         fields = ("username", "email")
@@ -82,6 +90,12 @@ class RegistroClienteForm(UserCreationForm):
         if User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError("Ya existe una cuenta asociada a este correo.")
         return email
+
+    def clean_terms(self):
+        value = self.cleaned_data.get("terms")
+        if not value:
+            raise forms.ValidationError("Debes aceptar los términos y condiciones.")
+        return value
 
 
 class PostulacionVendedorForm(forms.ModelForm):
