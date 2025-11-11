@@ -1,3 +1,5 @@
+"""Configura el panel administrativo para los modelos del dominio de EpicAnimes."""
+
 from django.contrib import admin
 from django.urls import path
 from django.shortcuts import render, redirect
@@ -16,13 +18,19 @@ from .models import (
     NewsletterSubscriber,
 )
 
+
 @admin.register(Vendedor)
 class VendedorAdmin(admin.ModelAdmin):
+    """Permite consultar y filtrar la información de los vendedores."""
+
     list_display = ("usuario", "telefono", "fecha_ingreso")
     search_fields = ("usuario__username",)
 
+
 @admin.register(Producto)
 class ProductoAdmin(admin.ModelAdmin):
+    """Administra el catálogo de productos disponibles."""
+
     list_display = (
         "nombre",
         "descripcion",
@@ -35,20 +43,26 @@ class ProductoAdmin(admin.ModelAdmin):
     search_fields = ("nombre", "marca", "categoria")
     list_filter = ("categoria", "calidad")
 
+
 @admin.register(Venta)
 class VentaAdmin(admin.ModelAdmin):
+    """Supervisa las ventas registradas para cada vendedor."""
+
     list_display = ("vendedor", "producto", "cantidad", "total", "fecha_venta")
     search_fields = ("vendedor__usuario__username", "producto__nombre")
     list_filter = ("fecha_venta",)
 
+
 @admin.register(Compra)
 class CompraAdmin(admin.ModelAdmin):
+    """Gestiona las compras provenientes del sitio público."""
+
     list_display = ("cliente", "producto", "valor_producto", "cantidad", "fecha_compra")
     search_fields = ("cliente",)
     list_filter = ("fecha_compra",)
 
-    # Agrega una vista personalizada para simular compras desde el admin
     def get_urls(self):
+        """Incorpora una vista personalizada para simular compras desde el admin."""
         urls = super().get_urls()
         custom = [
             path(
@@ -60,6 +74,7 @@ class CompraAdmin(admin.ModelAdmin):
         return custom + urls
 
     def simular_view(self, request):
+        """Genera compras y ventas ficticias para poblar métricas."""
         if request.method == 'POST':
             try:
                 n = max(1, int(request.POST.get('n', 20)))
@@ -88,7 +103,7 @@ class CompraAdmin(admin.ModelAdmin):
                     u = random.choice(usuarios)
                     qty = random.randint(min_qty, max_qty)
                     fecha = hoy - timedelta(days=random.randint(0, max(0, days - 1)))
-                    # Simula la compra del usuario (para dashboards de usuarios)
+                    # Registra una compra ficticia para alimentar los tableros de usuarios.
                     Compra.objects.create(
                         cliente=u.username,
                         usuario=u,
@@ -97,7 +112,7 @@ class CompraAdmin(admin.ModelAdmin):
                         cantidad=qty,
                         fecha_compra=fecha,
                     )
-                    # Además, si el producto pertenece a un vendedor, reflejar la venta del vendedor
+                    # Replica una venta asociada al vendedor en caso de existir.
                     if getattr(p, 'vendedor', None):
                         try:
                             Venta.objects.create(
@@ -108,7 +123,7 @@ class CompraAdmin(admin.ModelAdmin):
                             )
                         except Exception:
                             pass
-                    # Ajusta stock simulando una compra real
+                    # Ajusta el stock simulando una disminución realista.
                     try:
                         nuevo_stock = max(0, int(p.existencias or 0) - int(qty))
                         if nuevo_stock != p.existencias:
@@ -118,23 +133,31 @@ class CompraAdmin(admin.ModelAdmin):
                         pass
                 return redirect('admin:core_compra_changelist')
 
-        # GET o falta de datos -> renderiza formulario
+        # Renderiza el formulario cuando no hay datos o el método es GET.
         context = { **self.admin_site.each_context(request) }
         return render(request, 'admin/core/compra/simular.html', context)
 
 
 @admin.register(PerfilCliente)
 class PerfilClienteAdmin(admin.ModelAdmin):
+    """Expone la información asociada a los perfiles de clientes."""
+
     list_display = ("user", "nombre", "email", "telefono", "ciudad", "pais", "actualizado")
     search_fields = ("user__username", "email", "nombre")
 
+
 @admin.register(DashboardMetricas)
 class DashboardMetricasAdmin(admin.ModelAdmin):
+    """Ofrece un resumen de las cifras agregadas para los tableros administrativos."""
+
     list_display = ("fecha", "total_ventas", "total_productos", "total_vendedores", "total_clientes")
     list_filter = ("fecha",)
 
+
 @admin.register(PostulacionVendedor)
 class PostulacionVendedorAdmin(admin.ModelAdmin):
+    """Administra las postulaciones que envían potenciales vendedores."""
+
     list_display = ("nombre", "email", "telefono", "tienda", "fecha_envio", "estado")
     search_fields = ("nombre", "email", "tienda")
     list_filter = ("estado", "fecha_envio")
@@ -142,5 +165,7 @@ class PostulacionVendedorAdmin(admin.ModelAdmin):
 
 @admin.register(NewsletterSubscriber)
 class NewsletterSubscriberAdmin(admin.ModelAdmin):
+    """Gestiona los correos suscritos al boletín."""
+
     list_display = ("email", "fecha_suscripcion")
     search_fields = ("email",)

@@ -1,5 +1,6 @@
 {% extends "admin/change_list.html" %}
 {% block object-tools-items %}
+  {# Agrega accesos rápidos para simular compras desde el admin.  #}
   {{ block.super }}
   <li><a href="{% url 'admin:core_compra_simular' %}" class="addlink">Simular compras</a></li>
 {% endblock %}

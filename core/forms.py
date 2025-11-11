@@ -1,12 +1,17 @@
+"""Declara los formularios que se utilizan en autenticación y captación."""
+
 from django import forms
 from django.contrib.auth.forms import AuthenticationForm, UserCreationForm
 from django.core.cache import cache
 from django.core.exceptions import ValidationError
 from django.contrib.auth.models import User
+from django.utils import timezone
 from .models import PostulacionVendedor, PerfilCliente
 
 
 class LoginForm(AuthenticationForm):
+    """Extiende el formulario nativo para personalizar etiquetas y estilos."""
+
     username = forms.CharField(
         label="Usuario",
         widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "Nombre de usuario"}),
@@ -17,29 +22,44 @@ class LoginForm(AuthenticationForm):
     )
 
 
-class TwoFactorLoginForm(AuthenticationForm):
-    otp = forms.CharField(
-        label="Código de verificación",
-        required=False,
-        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "123456", "inputmode": "numeric", "pattern": "\\d{6}"}),
-    )
-
-    def clean(self):
-        cleaned_data = super().clean()
-        user = self.get_user()
-        # Requerir OTP si el usuario tiene email (mínimo para enviar código)
-        otp = (self.data.get("otp") or "").strip()
-        key = f"login_otp:{user.id}"
-        expected = cache.get(key)
-        if not expected:
-            raise ValidationError("Primero solicita el código de verificación y vuelve a intentarlo.")
-        if otp != str(expected):
-            raise ValidationError("Código de verificación incorrecto o expirado.")
-        # Consúmelo al usar
-        cache.delete(key)
-        return cleaned_data
-
+class TwoFactorLoginForm(AuthenticationForm):
+    """Valida credenciales y un codigo OTP enviado por correo."""
+
+    otp = forms.CharField(
+        label="Codigo de verificacion",
+        required=False,
+        widget=forms.TextInput(attrs={"class": "form-control", "placeholder": "123456", "inputmode": "numeric", "pattern": "\d{6}"}),
+    )
+
+    def clean(self):
+        """Confirma que el OTP ingresado coincide con el almacenado en cache."""
+        cleaned_data = super().clean()
+        user = self.get_user()
+        if not user:
+            return cleaned_data
+        otp = (self.data.get("otp") or "").strip()
+        if not otp:
+            raise ValidationError("Ingresa el codigo de verificacion enviado a tu correo.")
+        key = f"login_otp:{user.id}"
+        stored = cache.get(key)
+        if not stored:
+            raise ValidationError("El codigo de verificacion expiro o no ha sido solicitado. Genera uno nuevo.")
+        if isinstance(stored, dict):
+            expected = str(stored.get("code") or "")
+            expires_at = stored.get("expires_at")
+        else:
+            expected = str(stored)
+            expires_at = None
+        if expires_at is not None and timezone.now() > expires_at:
+            cache.delete(key)
+            raise ValidationError("El codigo de verificacion expiro, solicita uno nuevo.")
+        if otp != expected:
+            raise ValidationError("Codigo de verificacion incorrecto o expirado.")
+        cache.delete(key)
+        return cleaned_data
 class RegistroClienteForm(UserCreationForm):
+    """Crea cuentas de clientes garantizando la unicidad del correo."""
+
     email = forms.EmailField(
         required=True,
         widget=forms.EmailInput(attrs={"class": "form-control", "placeholder": "Correo electrónico"}),
@@ -57,6 +77,7 @@ class RegistroClienteForm(UserCreationForm):
         }
 
     def clean_email(self):
+        """Normaliza el correo y evita duplicados."""
         email = self.cleaned_data["email"].lower()
         if User.objects.filter(email__iexact=email).exists():
             raise forms.ValidationError("Ya existe una cuenta asociada a este correo.")
@@ -64,6 +85,8 @@ class RegistroClienteForm(UserCreationForm):
 
 
 class PostulacionVendedorForm(forms.ModelForm):
+    """Recoge los antecedentes de quienes desean convertirse en vendedores."""
+
     class Meta:
         model = PostulacionVendedor
         fields = ["nombre", "email", "telefono", "tienda", "instagram", "mensaje"]
@@ -86,6 +109,8 @@ class PostulacionVendedorForm(forms.ModelForm):
 
 
 class PerfilClienteForm(forms.ModelForm):
+    """Permite que el usuario mantenga su información de despacho actualizada."""
+
     class Meta:
         model = PerfilCliente
         fields = ["nombre", "email", "telefono", "direccion", "ciudad", "codigo_postal", "pais"]

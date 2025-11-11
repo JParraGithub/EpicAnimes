@@ -1,11 +1,4 @@
-"""
-ASGI config for EpicAnimes project.
-
-It exposes the ASGI callable as a module-level variable named ``application``.
-
-For more information on this file, see
-https://docs.djangoproject.com/en/4.2/howto/deployment/asgi/
-"""
+"""Configura la interfaz ASGI para exponer la aplicación de EpicAnimes."""
 
 import os
 

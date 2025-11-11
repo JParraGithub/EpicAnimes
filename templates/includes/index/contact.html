@@ -1,3 +1,4 @@
+<!-- Contiene el bloque de contacto directo del landing. -->
 <section id="contacto" class="section" data-section="contacto">
   <div class="contact glass">
     <div>
@@ -8,6 +9,7 @@
       <form class="signup-card" method="post" action="{% url 'newsletter_suscribir' %}">
         {% csrf_token %}
         <input type="hidden" name="next" value="{{ request.get_full_path }}">
+        <input type="hidden" name="next_anchor" value="contacto">
         <input type="hidden" name="segmento" value="comprador">
         <span class="pill">Compradores</span>
         <p class="muted text-small">
@@ -28,8 +30,8 @@
       <div class="signup-card">
         <span class="pill">Vendedores</span>
         <p class="muted text-small">
-          Completa la postulación oficial para que tu tienda aparezca en EpicAnimes.
-          Guardamos los datos en la base y los verás en el dashboard administrador (Nombre, Email, Teléfono, Tienda, Instagram / Web).
+          Completa la postulación oficial para que tus productos aparezcan en EpicAnimes.
+          Guardamos los datos en la base y los verás en el dashboard vendedor.
         </p>
         <a class="btn btn--ghost" href="{% url 'contacto' %}#postulacion">
           <i class="fa fa-store"></i> Ir a la postulación

@@ -1,3 +1,5 @@
+"""Define un backend SMTP adaptado a Gmail con tolerancia a fallos TLS."""
+
 import logging
 import ssl
 
@@ -8,12 +10,10 @@ logger = logging.getLogger(__name__)
 
 
 class GmailTLSBackend(EmailBackend):
-    """
-    SMTP backend que usa conexión SSL directa (puerto 465) para Gmail, con bundle de certifi
-    y fallback sin verificación cuando el entorno bloquea la cadena TLS.
-    """
+    """Envía correos usando SSL directo y conmutación ante errores de certificado."""
 
     def __init__(self, *args, **kwargs):
+        """Inicializa la conexión forzando SSL y validación con el bundle de certifi."""
         self._fallback_tried = False
         kwargs.setdefault("use_tls", False)
         kwargs.setdefault("use_ssl", True)
@@ -22,6 +22,7 @@ class GmailTLSBackend(EmailBackend):
         super().__init__(*args, **kwargs)
 
     def open(self):
+        """Abre la sesión SMTP y aplica un contexto inseguro si la verificación falla."""
         try:
             return super().open()
         except ssl.SSLCertVerificationError as exc:

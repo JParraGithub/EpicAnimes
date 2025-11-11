@@ -1,0 +1,192 @@
+{% load static %}
+<!DOCTYPE html>
+<!-- Muestra la ficha y la compra rápida de un producto. -->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ producto.nombre }} | EpicAnimes</title>
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="{% static 'css/base/index.css' %}?v=4">
+  <link rel="stylesheet" href="{% static 'css/pages/producto_detalle.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'css/base/chatbot.css' %}?v=2">
+</head>
+<body class="detail-body">
+  <canvas id="stars" aria-hidden="true"></canvas>
+
+  <svg class="orb orb--left" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <radialGradient id="prod-g1" cx="50%" cy="50%">
+        <stop offset="0%" stop-color="rgba(233,69,96,0.35)"></stop>
+        <stop offset="100%" stop-color="rgba(233,69,96,0)"></stop>
+      </radialGradient>
+    </defs>
+    <circle cx="100" cy="100" r="90" fill="url(#prod-g1)"></circle>
+  </svg>
+
+  <svg class="orb orb--right" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <defs>
+      <radialGradient id="prod-g2" cx="50%" cy="50%">
+        <stop offset="0%" stop-color="rgba(98,179,255,0.35)"></stop>
+        <stop offset="100%" stop-color="rgba(98,179,255,0)"></stop>
+      </radialGradient>
+    </defs>
+    <circle cx="100" cy="100" r="90" fill="url(#prod-g2)"></circle>
+  </svg>
+
+  {% include 'includes/navbar.html' with nav_page='catalogo' %}
+
+  <main class="product-page">
+    <nav class="breadcrumbs" aria-label="Ruta">
+      <a href="{% url 'index' %}">Inicio</a>
+      <span aria-hidden="true">/</span>
+      <a href="{% url 'index' %}#catalogo">Catálogo</a>
+      <span aria-hidden="true">/</span>
+      <span aria-current="page">{{ producto.nombre }}</span>
+    </nav>
+
+    <section class="product-hero glass">
+      <div class="product-media">
+        <div class="product-media__frame">
+          <img src="{{ producto.imagen_url }}" alt="{{ producto.nombre }}">
+        </div>
+        <div class="product-meta-grid">
+          <div class="meta-card">
+            <span class="label">Marca</span>
+            <strong>{{ producto.marca|default:"-" }}</strong>
+          </div>
+          <div class="meta-card">
+            <span class="label">Categoría</span>
+            <strong>{{ producto.categoria|default:"-" }}</strong>
+          </div>
+          <div class="meta-card">
+            <span class="label">Calidad</span>
+            <strong>{{ producto.calidad|default:"-" }}</strong>
+          </div>
+          <div class="meta-card">
+            <span class="label">Stock</span>
+            <strong>{{ producto.existencias|default:0 }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <div class="product-info">
+        <div class="info-head">
+          <p class="pill pill--accent">{{ producto.categoria|default:"Coleccionable" }}</p>
+          {% if producto.existencias > 0 %}
+            <span class="pill pill--success">Disponible</span>
+          {% else %}
+            <span class="pill pill--danger">Sin stock</span>
+          {% endif %}
+        </div>
+        <h1>{{ producto.nombre }}</h1>
+        <p class="description">{{ producto.descripcion|default:"Pronto agregaremos una descripción detallada de este artículo." }}</p>
+
+        <ul class="info-list">
+          <li><i class="fa fa-shield-halved"></i> Protección al comprador EpicShield</li>
+          <li><i class="fa fa-box"></i> Productos validados por el vendedor</li>
+          <li><i class="fa fa-truck-fast"></i> Envíos coordinados con seguimiento</li>
+        </ul>
+
+        {% if vendedor_nombre %}
+          <div class="seller-card">
+            <span class="label">Vendido por</span>
+            <p class="seller-name">{{ vendedor_nombre }}</p>
+          </div>
+        {% endif %}
+
+        <div class="price-block">
+          <div>
+            <p class="price-label">Precio</p>
+            <p class="price">${{ producto.precio|floatformat:0 }}</p>
+          </div>
+
+          {% if producto.existencias > 0 %}
+            {% if puede_comprar %}
+              <form method="post" action="{% url 'carrito_agregar' producto.id %}" class="cta-form">
+                {% csrf_token %}
+                <label class="sr-only" for="cantidad">Cantidad</label>
+                <input class="quantity-input"
+                       type="number"
+                       id="cantidad"
+                       name="cantidad"
+                       value="1"
+                       min="1"
+                       max="{{ producto.existencias }}"
+                       data-quantity-max="{{ producto.existencias }}">
+                <button type="submit" class="btn btn--primary">
+                  <i class="fa fa-cart-plus"></i> Agregar al carrito
+                </button>
+              </form>
+            {% elif request.user.is_authenticated %}
+              <div class="cta-form cta-form--disabled">
+                <input class="quantity-input" type="number" value="1" disabled>
+                <span class="cta-message">Disponible solo para perfiles compradores</span>
+              </div>
+            {% else %}
+              <div class="cta-form">
+                <input class="quantity-input" type="number" value="1" disabled>
+                <button type="button"
+                        class="btn btn--ghost require-auth"
+                        data-login-url="{% url 'login' %}?next={% url 'producto_detalle' producto.id %}"
+                        data-message="Necesitas iniciar sesión para agregar productos al carrito.">
+                  <i class="fa fa-right-to-bracket"></i> Iniciar sesión
+                </button>
+              </div>
+            {% endif %}
+          {% else %}
+            <span class="pill pill--danger">Sin stock disponible</span>
+          {% endif %}
+        </div>
+      </div>
+    </section>
+
+    {% if relacionados %}
+      <section class="related-section">
+        <div class="section-head">
+          <div>
+            <p class="pill pill--accent">Recomendados</p>
+            <h2>También te puede interesar</h2>
+            <p class="section-copy">Coleccionables seleccionados según tu búsqueda.</p>
+          </div>
+        </div>
+        <div class="related-grid">
+          {% for rel in relacionados %}
+            <a class="related-card glass" href="{% url 'producto_detalle' rel.id %}">
+              <div class="related-card__image">
+                <img src="{{ rel.imagen_url }}" alt="{{ rel.nombre }}">
+              </div>
+              <div class="related-card__body">
+                <h3>{{ rel.nombre }}</h3>
+                <p class="related-meta">{{ rel.marca|default:"Colección" }}</p>
+                <div class="related-price">
+                  <span>${{ rel.precio|floatformat:0 }}</span>
+                  <i class="fa fa-arrow-right"></i>
+                </div>
+              </div>
+            </a>
+          {% endfor %}
+        </div>
+      </section>
+    {% endif %}
+  </main>
+
+  <footer class="footer glass">
+    <p>&copy; <span id="currentYear"></span> EpicAnimes - Ecommerce otaku con pagos seguros.</p>
+    <nav class="footer__links" aria-label="Enlaces legales">
+      <a href="{% url 'terminos' %}">Términos</a>
+      <a href="{% url 'contacto' %}">Soporte</a>
+      <a href="{% url 'sobre_nosotros' %}">Nosotros</a>
+    </nav>
+  </footer>
+
+  {% include 'includes/chatbot_popup.html' %}
+
+  <script src="{% static 'js/site/index.js' %}?v=2"></script>
+  <script defer src="{% static 'js/site/chatbot.js' %}?v=2"></script>
+  <script>
+    try { document.getElementById('currentYear').textContent = new Date().getFullYear(); } catch (err) {}
+  </script>
+</body>
+</html>

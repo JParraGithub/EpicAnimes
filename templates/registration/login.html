@@ -1,6 +1,7 @@
 {% extends "registration/auth_base.html" %}
 {% load static %}
 {% block title %}Iniciar sesión | EpicAnimes{% endblock %}
+  {# Renderiza el formulario de inicio de sesión con verificación OTP.  #}
 
 {% block auth_content %}
   <section class="auth-grid">
@@ -71,8 +72,9 @@
           </button>
 
           <div class="auth-links">
-            <a href="{% url 'password_reset' %}"><i class="fa fa-unlock"></i> ¿Olvidaste tu contraseña?</a>
-            <span>¿Nuevo en EpicAnimes? <a href="{% url 'signup' %}">Crea una cuenta</a></span>
+            <span>¿Nuevo en EpicAnimes?<a href="{% url 'signup' %}"> ¡Crea una cuenta!</a></span>
+            <a href="{% url 'password_reset' %}"><br><i class="fa fa-unlock"></i> ¿Olvidaste tu contraseña?</a>
+            
           </div>
         </form>
       </div>

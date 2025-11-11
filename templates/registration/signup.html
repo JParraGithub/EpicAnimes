@@ -1,6 +1,7 @@
 {% extends "registration/auth_base.html" %}
 {% load static %}
 {% block title %}Crear cuenta | EpicAnimes{% endblock %}
+  {# Entrega el formulario de registro de nuevos clientes.  #}
 
 {% block auth_content %}
   <section class="auth-grid">
@@ -141,5 +142,5 @@
 {% endblock %}
 
 {% block extra_js %}
-  <script src="{% static 'js/signup.js' %}?v=2" defer></script>
+  <script src="{% static 'js/site/signup.js' %}?v=2" defer></script>
 {% endblock %}

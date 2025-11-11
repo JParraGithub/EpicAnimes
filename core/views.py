@@ -1,4 +1,4 @@
-# core/views.py
+               
 
 from datetime import timedelta
 
@@ -9,6 +9,7 @@ from difflib import SequenceMatcher
 import json
 
 import unicodedata
+from urllib.parse import urlsplit
 
 
 
@@ -33,6 +34,7 @@ from django.core.mail import send_mail
 from django.core.validators import validate_email
 
 from django.core.cache import cache
+from django.core.files.images import get_image_dimensions
 
 from django.contrib.auth.password_validation import validate_password
 
@@ -86,92 +88,144 @@ from .chatbot import responder as chatbot_responder
 
 logger = logging.getLogger(__name__)
 
+PRODUCT_IMAGE_MAX_MB = 2
+PRODUCT_IMAGE_MAX_WIDTH = 1200
+PRODUCT_IMAGE_MAX_HEIGHT = 1200
+
+
+def _validar_imagen_producto(imagen, *, max_mb=PRODUCT_IMAGE_MAX_MB, max_width=PRODUCT_IMAGE_MAX_WIDTH, max_height=PRODUCT_IMAGE_MAX_HEIGHT):
+    """Verifica el tamaño en MB y las dimensiones máximas permitidas para las imágenes de productos."""
+    if not imagen:
+        return
+    max_bytes = int(max_mb * 1024 * 1024)
+    if getattr(imagen, "size", 0) > max_bytes:
+        raise ValidationError(f"La imagen es muy pesada. Usa archivos de hasta {max_mb} MB.")
+    try:
+        imagen.seek(0)
+    except Exception:
+        pass
+    width, height = get_image_dimensions(imagen)
+    try:
+        imagen.seek(0)
+    except Exception:
+        pass
+    if not width or not height:
+        raise ValidationError("No pude leer la imagen. Usa formatos JPG o PNG válidos.")
+    if width > max_width or height > max_height:
+        raise ValidationError(f"La imagen debe medir como máximo {max_width}x{max_height} px.")
+
+
 @require_http_methods(["POST"])
 
 def newsletter_suscribir(request):
-
+    """Suscribe un correo al boletín y notifica el resultado."""
     email = (request.POST.get("newsletter_email") or "").strip()
-
     next_url = request.POST.get("next") or request.META.get("HTTP_REFERER") or "index"
+    anchor = (request.POST.get("next_anchor") or request.POST.get("anchor") or "").strip().lstrip("#")
+    segmento = (request.POST.get("segmento") or "").strip()
+    source_hint = (request.POST.get("source_path") or request.POST.get("next") or request.META.get("HTTP_REFERER") or "").strip()
+    wants_json = (
+        "application/json" in (request.headers.get("Accept") or "").lower()
+        or request.headers.get("HX-Request")
+        or request.headers.get("X-Requested-With") == "XMLHttpRequest"
+    )
 
+    def _normalize_source(value: str) -> str:
+        if not value:
+            return ""
+        try:
+            parts = urlsplit(value)
+        except ValueError:
+            return value[:255]
+        path_value = parts.path or "/"
+        if parts.query:
+            path_value = f"{path_value}?{parts.query}"
+        return path_value[:255]
 
+    source_path = _normalize_source(source_hint)
+    segmento_value = segmento[:60]
 
     def _redirect_default():
-
+        target = None
         if next_url and url_has_allowed_host_and_scheme(
-
             next_url,
-
             allowed_hosts={request.get_host()},
-
             require_https=request.is_secure(),
-
         ):
+            target = next_url
+        if not target:
+            target = reverse("index")
+        if anchor:
+            base = target.split("#", 1)[0]
+            target = f"{base}#{anchor}"
+        return redirect(target)
 
-            return redirect(next_url)
-
-        return redirect("index")
-
-
+    def _respond(level: str, text: str, *, created: bool = False):
+        if wants_json:
+            status_code = 201 if created else (200 if level != "error" else 400)
+            return JsonResponse({"ok": level != "error", "created": created, "message": text}, status=status_code)
+        notifier = {
+            "error": messages.error,
+            "success": messages.success,
+            "warning": messages.warning,
+            "info": messages.info,
+        }.get(level, messages.info)
+        notifier(request, text)
+        return _redirect_default()
 
     if not email:
-
-        messages.error(request, "Ingresa tu correo para suscribirte.")
-
-        return _redirect_default()
-
-
+        return _respond("error", "Ingresa tu correo para suscribirte.")
 
     try:
-
         validate_email(email)
-
     except ValidationError:
-
-        messages.error(request, "El correo ingresado no es valido.")
-
-        return _redirect_default()
-
-
+        return _respond("error", "El correo ingresado no es válido.")
 
     email = email.lower()
+    defaults = {}
+    if segmento_value:
+        defaults["segmento"] = segmento_value
+    if source_path:
+        defaults["ruta_origen"] = source_path
 
-    subscriber, created = NewsletterSubscriber.objects.get_or_create(email=email)
+    subscriber, created = NewsletterSubscriber.objects.get_or_create(email=email, defaults=defaults)
 
     if created:
-
-        asunto = "\u00a1Bienvenido a la comunidad EpicAnimes!"
-
+        asunto = "¡Bienvenido a la comunidad EpicAnimes!"
         cuerpo = (
-
-            f"Hola, Bienvenido a EpicAnimes!"
-
+            "Hola, Bienvenido a EpicAnimes!"
             "Gracias por suscribirte a las noticias de EpicAnimes. "
-            "A partir de ahora recibir\u00e1s novedades, preventas y recomendaciones exclusivas.\n\n"
-            "Si en alg\u00fan momento deseas darte de baja, solo responde a este correo y lo gestionaremos.\n\n"
-            "\u00a1Nos vemos en la pr\u00f3xima aventura otaku!"
-
+            "A partir de ahora recibirás novedades, preventas y recomendaciones exclusivas.\n\n"
+            "Si en algún momento deseas darte de baja, solo responde a este correo y lo gestionaremos.\n\n"
+            "¡Nos vemos en la próxima aventura otaku!"
         )
-
         try:
-
             send_mail(asunto, cuerpo, settings.DEFAULT_FROM_EMAIL, [email], fail_silently=False)
-
-            messages.success(request, "Gracias por unirte a la comunidad. Te enviamos un correo de bienvenida.")
-
+            return _respond("success", "Gracias por unirte a la comunidad. Te enviamos un correo de bienvenida.", created=True)
         except Exception:
+            logger.exception("Fallo al enviar correo de bienvenida a %s", email)
+            return _respond("warning", "Te suscribimos, pero no pudimos enviar el correo de bienvenida.", created=True)
 
-            messages.warning(request, "Te suscribimos, pero no pudimos enviar el correo de bienvenida.")
+    updated_fields = []
+    if segmento_value:
+        existing = [seg.strip() for seg in (subscriber.segmento or "").split(",") if seg.strip()]
+        existing_lower = {seg.lower() for seg in existing}
+        if segmento_value.lower() not in existing_lower:
+            existing.append(segmento_value)
+            subscriber.segmento = ", ".join(existing)
+            updated_fields.append("segmento")
+    if source_path and source_path != subscriber.ruta_origen:
+        subscriber.ruta_origen = source_path
+        updated_fields.append("ruta_origen")
+    if updated_fields:
+        subscriber.save(update_fields=updated_fields)
+        return _respond("info", "Actualizamos tus preferencias de newsletter.")
 
-    else:
-
-        messages.info(request, "Ese correo ya esta suscrito a nuestras noticias.")
-
-    return _redirect_default()
-
+    return _respond("info", "Ese correo ya está suscrito a nuestras noticias.")
 
 @require_http_methods(["POST"])
 def api_chatbot_ask(request):
+    """Responde preguntas enviadas al chatbot con mensajes JSON."""
     try:
         payload = json.loads(request.body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError, AttributeError, TypeError):
@@ -204,6 +258,7 @@ class CarritoError(Exception):
 
 def obtener_rol_usuario(user):
 
+    """Determina el rol actual del usuario autenticado."""
     if not user.is_authenticated:
 
         return "anonimo"
@@ -224,6 +279,7 @@ def obtener_rol_usuario(user):
 
 def _get_cart(request):
 
+    """Obtiene y limpia el carrito almacenado en la sesión."""
     raw = request.session.get("cart", {})
 
     cart = {}
@@ -252,6 +308,7 @@ def _get_cart(request):
 
 def _save_cart(request, cart):
 
+    """Persiste el carrito en la sesión y marca la modificación."""
     request.session["cart"] = cart
 
     request.session.modified = True
@@ -262,6 +319,7 @@ def _save_cart(request, cart):
 
 def _cart_count(cart):
 
+    """Cuenta la cantidad total de unidades registradas en el carrito."""
     return sum(cart.values())
 
 
@@ -270,6 +328,7 @@ def _cart_count(cart):
 
 def _resolver_datos_cliente(request, datos_cliente=None):
 
+    """Compila y valida los datos de despacho del cliente."""
     datos_cliente = datos_cliente or {}
 
     nombre = (
@@ -346,6 +405,7 @@ def _resolver_datos_cliente(request, datos_cliente=None):
 
 def _calcular_lineas_y_total(cart, *, lock=False):
 
+    """Valida el stock de cada producto y acumula la suma del carrito."""
     if not cart:
 
         raise CarritoError("El carrito está vacío.")
@@ -354,7 +414,10 @@ def _calcular_lineas_y_total(cart, *, lock=False):
 
     ids = [int(pk) for pk in cart.keys()]
 
-    qs = Producto.objects.filter(id__in=ids)
+    qs = (
+        Producto.objects.filter(id__in=ids)
+        .select_related("vendedor", "vendedor__usuario")
+    )
 
     if lock:
 
@@ -404,10 +467,192 @@ def _calcular_lineas_y_total(cart, *, lock=False):
 
 
 
+def _correo_remitente_default():
+
+    """Entrega el remitente base para los correos automáticos."""
+    return (
+
+        getattr(settings, "DEFAULT_FROM_EMAIL", None)
+
+        or getattr(settings, "EMAIL_HOST_USER", None)
+
+        or "no-reply@epicanimes.com"
+
+    )
+
+
+
+def _formatear_monto_correo(valor, paso):
+
+    """Formatea montos en función de la resolución monetaria."""
+    paso = paso or Decimal("0.01")
+
+    cuantizado = valor.quantize(paso)
+
+    if paso == Decimal("1"):
+
+        return f"$ {int(cuantizado)}"
+
+    return f"$ {cuantizado:.2f}"
+
+
+
+def _resumen_productos_correo(lineas, paso):
+
+    """Construye un resumen textual de los productos comprados."""
+    partes = []
+
+    for producto, cantidad, subtotal in lineas:
+
+        partes.append(f"- {producto.nombre} x{cantidad} ({_formatear_monto_correo(subtotal, paso)})")
+
+    return "\n".join(partes) if partes else "- Sin productos asociados"
+
+
+
+def _enviar_correo_simple(asunto, cuerpo, destinatario):
+
+    """Centraliza el envío y loguea fallos sin interrumpir la compra."""
+    remitente = _correo_remitente_default()
+
+    try:
+
+        send_mail(asunto, cuerpo, remitente, [destinatario], fail_silently=False)
+
+    except Exception:
+
+        logger.exception("No se pudo enviar el correo '%s' a %s", asunto, destinatario)
+
+
+
+def _notificar_actores_compra(datos_cliente, lineas, total, referencia_pago, paso_moneda):
+
+    """Envía un correo al comprador y a cada vendedor involucrado."""
+    if not lineas:
+
+        return
+
+    nombre_cliente = datos_cliente.get("nombre") or "Cliente EpicAnimes"
+
+    correo_cliente = datos_cliente.get("correo") or datos_cliente.get("email")
+
+    telefono = datos_cliente.get("telefono") or "No informado"
+
+    direccion = datos_cliente.get("direccion") or "Sin dirección"
+
+    ciudad = datos_cliente.get("ciudad") or ""
+
+    notas = datos_cliente.get("notas") or "Sin notas"
+
+    referencia = referencia_pago or "Sin referencia"
+
+    total_formateado = _formatear_monto_correo(total, paso_moneda)
+
+    detalle_general = _resumen_productos_correo(lineas, paso_moneda)
+
+    if correo_cliente:
+
+        cuerpo_cliente = (
+
+            f"Hola {nombre_cliente},\n\n"
+
+            "EpicAnimes confirma que su compra fue registrada con éxito.\n"
+
+            f"Referencia: {referencia}\n"
+
+            f"Total: {total_formateado}\n\n"
+
+            "Detalle de productos:\n"
+
+            f"{detalle_general}\n\n"
+
+            "Datos de envío:\n"
+
+            f"- Dirección: {direccion}\n"
+
+            f"- Ciudad: {ciudad or 'No indicada'}\n"
+
+            f"- Teléfono: {telefono}\n"
+
+            f"- Notas: {notas}\n\n"
+
+            "Gracias por confiar en EpicAnimes."
+
+        )
+
+        _enviar_correo_simple("EpicAnimes | Compra registrada", cuerpo_cliente, correo_cliente)
+
+    vendedores = {}
+
+    for producto, cantidad, subtotal in lineas:
+
+        vendedor = getattr(producto, "vendedor", None)
+
+        usuario_vendedor = getattr(vendedor, "usuario", None) if vendedor else None
+
+        if not usuario_vendedor or not usuario_vendedor.email:
+
+            continue
+
+        vendedores.setdefault(usuario_vendedor, []).append((producto, cantidad, subtotal))
+
+    for usuario_vendedor, productos_vendedor in vendedores.items():
+
+        nombre_vendedor = (
+
+            usuario_vendedor.get_full_name()
+
+            or usuario_vendedor.username
+
+            or "Vendedor EpicAnimes"
+
+        )
+
+        total_vendedor = sum((subtotal for _, _, subtotal in productos_vendedor), Decimal("0"))
+
+        detalle_vendedor = _resumen_productos_correo(productos_vendedor, paso_moneda)
+
+        cuerpo_vendedor = (
+
+            f"Hola {nombre_vendedor},\n\n"
+
+            "Se registró una nueva compra relacionada con tus productos en EpicAnimes.\n"
+
+            f"Referencia: {referencia}\n"
+
+            f"Total asociado: {_formatear_monto_correo(total_vendedor, paso_moneda)}\n\n"
+
+            "Detalle de productos:\n"
+
+            f"{detalle_vendedor}\n\n"
+
+            "Datos de envío del comprador:\n"
+
+            f"- Nombre: {nombre_cliente}\n"
+
+            f"- Correo: {correo_cliente or 'Sin correo'}\n"
+
+            f"- Teléfono: {telefono}\n"
+
+            f"- Dirección: {direccion}\n"
+
+            f"- Ciudad: {ciudad or 'No indicada'}\n"
+
+            f"- Notas: {notas}\n\n"
+
+            "Prepara el despacho y actualiza el seguimiento dentro del panel de vendedor.\n"
+
+            "Equipo EpicAnimes"
+
+        )
+
+        _enviar_correo_simple("EpicAnimes | Nueva orden para despacho", cuerpo_vendedor, usuario_vendedor.email)
+
 
 
 def _build_cart_items(cart):
 
+    """Convierte el contenido del carrito en objetos enriquecidos y calcula totales."""
     if not cart:
 
         return [], Decimal("0"), True
@@ -470,6 +715,7 @@ def _build_cart_items(cart):
 
 def _normalize_text(text):
 
+    """Normaliza cadenas para comparaciones insensibles a tildes."""
     if not text:
 
         return ""
@@ -486,6 +732,7 @@ def _normalize_text(text):
 
 def _smart_tokenize(text):
 
+    """Tokeniza una cadena manteniendo una versión completa normalizada."""
     base = _normalize_text(text)
 
     tokens = [tok for tok in base.split() if tok]
@@ -502,6 +749,7 @@ def _smart_tokenize(text):
 
 def _smart_match_score(producto, query_tokens, query_full):
 
+    """Calcula un puntaje heurístico entre un producto y una consulta."""
     campos = [
 
         producto.nombre,
@@ -570,11 +818,11 @@ def _smart_match_score(producto, query_tokens, query_full):
 
 
 
-# ============================================================
+                                                              
 
-#                     PÁGINAS PÚBLICAS
+                                      
 
-# ============================================================
+                                                              
 
 
 
@@ -582,6 +830,7 @@ def _smart_match_score(producto, query_tokens, query_full):
 
 def VistaIndex(request):
 
+    """Construye la página principal con listados y destacados."""
     rol_usuario = obtener_rol_usuario(request.user)
 
 
@@ -611,7 +860,7 @@ def VistaIndex(request):
         productos_qs = productos_qs.filter(marca__iexact=filtro_marca)
     if filtro_calidad and filtro_calidad.lower() != "todas":
         productos_qs = productos_qs.filter(calidad__iexact=filtro_calidad)
-    # Rango de precio (manejar valores inválidos de forma segura)
+                                                                 
     try:
         if filtro_precio_min_raw:
             productos_qs = productos_qs.filter(precio__gte=Decimal(filtro_precio_min_raw))
@@ -710,7 +959,7 @@ def VistaIndex(request):
         .distinct()
     )
 
-    # Sugerencias de búsqueda: categorías, marcas y algunos productos recientes
+                                                                               
     sugerencias_busqueda = []
     try:
         sugerencias_busqueda.extend(list(categorias[:8]))
@@ -836,17 +1085,7 @@ def VistaIndex(request):
 
     }
 
-    return render(request, "index.html", contexto)
-
-
-
-
-
-def VistaSobreNosotros(request):
-
-    return render(request, "sobrenosotros.html")
-
-
+    return render(request, "public/index.html", contexto)
 
 
 
@@ -856,6 +1095,7 @@ def VistaSobreNosotros(request):
 
 def VistaContacto(request):
 
+    """Renderiza la página de contacto con datos de soporte."""
     cart = _get_cart(request)
 
     cart_count = _cart_count(cart)
@@ -888,7 +1128,7 @@ def VistaContacto(request):
 
     }
 
-    return render(request, "contacto.html", contexto)
+    return render(request, "public/contacto.html", contexto)
 
 
 
@@ -896,6 +1136,7 @@ def VistaContacto(request):
 
 def VistaProductoDetalle(request, producto_id):
 
+    """Presenta el detalle de un producto específico."""
     producto = get_object_or_404(
 
         Producto.objects.select_related("vendedor", "vendedor__usuario"),
@@ -958,7 +1199,7 @@ def VistaProductoDetalle(request, producto_id):
 
     }
 
-    return render(request, "producto_detalle.html", contexto)
+    return render(request, "public/producto_detalle.html", contexto)
 
 
 
@@ -1021,7 +1262,7 @@ def VistaRegistro(request):
 
                 messages.error(request, e)
 
-            # re-render con valores actuales
+                                            
 
             return render(request, "registration/signup.html", {
 
@@ -1053,9 +1294,10 @@ def VistaRegistro(request):
 
 
 
-def _procesar_compra(request, referencia_pago=None, datos_cliente=None):
+def _procesar_compra(request, referencia_pago=None, datos_cliente=None, *, force=False):
 
-    if obtener_rol_usuario(request.user) != "comprador":
+    """Genera la orden y reduce stock al finalizar la compra."""
+    if not force and obtener_rol_usuario(request.user) != "comprador":
 
         raise CarritoError("Solo los clientes pueden comprar.")
 
@@ -1077,28 +1319,29 @@ def _procesar_compra(request, referencia_pago=None, datos_cliente=None):
             total, order_total, _, moneda_paypal, order_currency = _calcular_totales_paypal(total)
         except PayPalError as exc:
             raise CarritoError(str(exc))
-
-
+        paso_moneda = paypal_amount_step(moneda_paypal)
 
         if referencia_pago:
 
-            try:
+            if not force:
 
-                captura = paypal_capture_order(
+                try:
 
-                    referencia_pago,
+                    captura = paypal_capture_order(
 
-                    expected_amount=total,
+                        referencia_pago,
 
-                    expected_currency=moneda_paypal,
+                        expected_amount=total,
 
-                )
+                        expected_currency=moneda_paypal,
 
-            except PayPalError as exc:
+                    )
 
-                raise CarritoError(str(exc))
+                except PayPalError as exc:
 
-            referencia_pago = captura.capture_id or captura.order_id or referencia_pago
+                    raise CarritoError(str(exc))
+
+                referencia_pago = captura.capture_id or captura.order_id or referencia_pago
 
             if Compra.objects.select_for_update().filter(referencia_pago=referencia_pago).exists():
 
@@ -1182,10 +1425,25 @@ def _procesar_compra(request, referencia_pago=None, datos_cliente=None):
 
     request.session.modified = True
 
+    _notificar_actores_compra(
+
+        datos_normalizados,
+
+        lineas,
+
+        total,
+
+        referencia_pago,
+
+        paso_moneda,
+
+    )
+
     return total
 
 
 def _calcular_totales_paypal(total):
+    """Normaliza los totales según la configuración de PayPal."""
     moneda_paypal = getattr(settings, "PAYPAL_CURRENCY", "CLP")
     order_currency = getattr(settings, "PAYPAL_ORDER_CURRENCY", moneda_paypal)
     conversion_rate, _ = get_paypal_conversion_rate()
@@ -1205,6 +1463,7 @@ def _calcular_totales_paypal(total):
 
 def VistaCarrito(request):
 
+    """Muestra el carrito del usuario junto con la información de checkout."""
     cart = _get_cart(request)
 
     items, total, carrito_sin_fallos = _build_cart_items(cart)
@@ -1292,7 +1551,7 @@ def VistaCarrito(request):
 
     }
 
-    return render(request, "carrito.html", contexto)
+    return render(request, "public/carrito.html", contexto)
 
 
 
@@ -1304,6 +1563,7 @@ def VistaCarrito(request):
 
 def agregar_al_carrito(request, producto_id):
 
+    """Agrega un producto al carrito del usuario."""
     if obtener_rol_usuario(request.user) != "comprador":
 
         messages.error(request, "Tu rol no permite comprar en la tienda.")
@@ -1350,6 +1610,7 @@ def agregar_al_carrito(request, producto_id):
 
 def actualizar_carrito(request, producto_id):
 
+    """Actualiza las cantidades de un producto dentro del carrito."""
     is_json = request.headers.get("x-requested-with") == "XMLHttpRequest" or (request.content_type or "").startswith("application/json")
 
     if obtener_rol_usuario(request.user) != "comprador":
@@ -1486,6 +1747,7 @@ def actualizar_carrito(request, producto_id):
 
 def eliminar_del_carrito(request, producto_id):
 
+    """Elimina un producto del carrito."""
     is_json = request.headers.get("x-requested-with") == "XMLHttpRequest" or (request.content_type or "").startswith("application/json")
 
     cart = _get_cart(request)
@@ -1538,6 +1800,7 @@ def eliminar_del_carrito(request, producto_id):
 
 def paypal_crear_orden(request):
 
+    """Crea una orden de PayPal para el contenido del carrito."""
     if obtener_rol_usuario(request.user) != "comprador":
 
         return JsonResponse({"ok": False, "error": "Tu rol no permite comprar en la tienda."}, status=403)
@@ -1673,6 +1936,7 @@ def paypal_crear_orden(request):
 
 def finalizar_compra(request):
 
+    """Valida el carrito y crea la orden de compra definitiva."""
     content_type = request.content_type or ""
 
     is_json = content_type.startswith("application/json") or request.headers.get("x-requested-with") == "XMLHttpRequest"
@@ -1766,28 +2030,101 @@ def finalizar_compra(request):
     return redirect("carrito_gracias")
 
 
+@login_required
+@require_http_methods(["POST"])
+def carrito_compra_ficticia(request):
+    """Permite registrar una compra de prueba sin pasar por PayPal."""
+    content_type = request.content_type or ""
+    is_json = content_type.startswith("application/json") or request.headers.get("x-requested-with") == "XMLHttpRequest"
+
+    datos_cliente = {}
+    if content_type.startswith("application/json"):
+        try:
+            payload = json.loads(request.body or "{}")
+        except json.JSONDecodeError:
+            payload = {}
+        datos_cliente = payload.get("datos_cliente") or {}
+    else:
+        datos_cliente = {
+            "nombre": request.POST.get("nombre") or "",
+            "email": request.POST.get("email") or "",
+            "telefono": request.POST.get("telefono") or "",
+            "direccion": request.POST.get("direccion") or "",
+            "ciudad": request.POST.get("ciudad") or "",
+            "notas": request.POST.get("notas") or "",
+        }
+
+    referencia = f"FICT-{request.user.id}-{timezone.now().strftime('%Y%m%d%H%M%S')}"
+    try:
+        total = _procesar_compra(
+            request,
+            referencia_pago=referencia,
+            datos_cliente=datos_cliente,
+            force=True,
+        )
+    except CarritoError as exc:
+        if is_json:
+            return JsonResponse({"ok": False, "error": str(exc)}, status=400)
+        messages.error(request, str(exc))
+        return redirect("carrito")
+    except Exception:
+        logger.exception("Error al registrar compra ficticia")
+        if is_json:
+            return JsonResponse({"ok": False, "error": "No se pudo registrar la compra ficticia."}, status=500)
+        messages.error(request, "No se pudo registrar la compra ficticia.")
+        return redirect("carrito")
+
+    mensaje_ok = "Compra ficticia registrada. Stock actualizado."
+    if is_json:
+        return JsonResponse(
+            {"ok": True, "redirect": reverse("carrito_gracias"), "total": f"{Decimal(total):.2f}"},
+            status=201,
+        )
+    messages.success(request, mensaje_ok)
+    return redirect("carrito_gracias")
+
+
 def carrito_gracias(request):
 
+    """Muestra la página de confirmación después de pagar."""
     total = request.session.pop("ultimo_total", None)
     checkout_info = request.session.pop("ultimo_checkout_info", None)
-    return render(request, "carrito_gracias.html", {"total": total, "checkout_info": checkout_info})
+    cart = _get_cart(request)
+    contexto = {
+        "total": total,
+        "checkout_info": checkout_info,
+        "cart_count": _cart_count(cart),
+        "rol_usuario": obtener_rol_usuario(request.user),
+    }
+    return render(request, "public/carrito_gracias.html", contexto)
 
 
-# ============================================================
+                                                              
 
-#                     PÁGINAS PÚBLICAS
+                                      
 
-# ============================================================
+                                                              
 
 def VistaSobreNosotros(request):
-
-    return render(request, "sobrenosotros.html")
-
+    """Expone la página informativa de la empresa."""
+    cart = _get_cart(request)
+    contexto = {
+        "cart_count": _cart_count(cart),
+        "rol_usuario": obtener_rol_usuario(request.user),
+        "nav_page": "sobre_nosotros",
+    }
+    return render(request, "public/sobrenosotros.html", contexto)
 
 
 def VistaTerminos(request):
-
-    return render(request, "terminos.html")
+    """Entrega la vista con términos y condiciones."""
+    cart = _get_cart(request)
+    contexto = {
+        "cart_count": _cart_count(cart),
+        "rol_usuario": obtener_rol_usuario(request.user),
+        "nav_page": "terminos",
+    }
+    return render(request, "public/terminos.html", contexto)
 
 
 
@@ -1816,13 +2153,18 @@ def send_login_otp(request):
     import random
 
     code = random.randint(100000, 999999)
-    cache.set(f"login_otp:{user.id}", str(code), 300)
+    expires_at = timezone.now() + timedelta(minutes=5)
+    cache.set(
+        f"login_otp:{user.id}",
+        {"code": str(code), "expires_at": expires_at},
+        300,
+    )
 
     asunto = "Código de verificación EpicAnimes"
     cuerpo = (
         f"Hola {user.username},\n\n"
         f"Tu código de verificación es: {code}.\n"
-        "Es válido por 5 minutos. Si no solicitaste este código, ignora este mensaje.\n\n"
+        "Este código solo funciona 1 vez. Si no solicitaste este código, ignora este mensaje.\n\n"
         "EpicAnimes"
     )
 
@@ -1853,6 +2195,7 @@ def send_login_otp(request):
 
 def VistaContacto(request):
 
+    """Renderiza la página de contacto con datos de soporte."""
     cart = _get_cart(request)
 
     cart_count = _cart_count(cart)
@@ -1885,7 +2228,7 @@ def VistaContacto(request):
 
     }
 
-    return render(request, "contacto.html", contexto)
+    return render(request, "public/contacto.html", contexto)
 
 
 
@@ -1893,6 +2236,7 @@ def VistaContacto(request):
 
 def VistaProductoDetalle(request, producto_id):
 
+    """Presenta el detalle de un producto específico."""
     producto = get_object_or_404(
 
         Producto.objects.select_related("vendedor", "vendedor__usuario"),
@@ -1955,7 +2299,7 @@ def VistaProductoDetalle(request, producto_id):
 
     }
 
-    return render(request, "producto_detalle.html", contexto)
+    return render(request, "public/producto_detalle.html", contexto)
 
 
 
@@ -2018,7 +2362,7 @@ def VistaRegistro(request):
 
                 messages.error(request, e)
 
-            # re-render con valores actuales
+                                            
 
             return render(request, "registration/signup.html", {
 
@@ -2050,9 +2394,10 @@ def VistaRegistro(request):
 
 
 
-def _procesar_compra(request, referencia_pago=None, datos_cliente=None):
+def _procesar_compra(request, referencia_pago=None, datos_cliente=None, *, force=False):
 
-    if obtener_rol_usuario(request.user) != "comprador":
+    """Genera la orden y reduce stock al finalizar la compra."""
+    if not force and obtener_rol_usuario(request.user) != "comprador":
 
         raise CarritoError("Solo los clientes pueden comprar.")
 
@@ -2074,28 +2419,29 @@ def _procesar_compra(request, referencia_pago=None, datos_cliente=None):
             total, order_total, _, moneda_paypal, order_currency = _calcular_totales_paypal(total)
         except PayPalError as exc:
             raise CarritoError(str(exc))
-
-
+        paso_moneda = paypal_amount_step(moneda_paypal)
 
         if referencia_pago:
 
-            try:
+            if not force:
 
-                captura = paypal_capture_order(
+                try:
 
-                    referencia_pago,
+                    captura = paypal_capture_order(
 
-                    expected_amount=total,
+                        referencia_pago,
 
-                    expected_currency=moneda_paypal,
+                        expected_amount=total,
 
-                )
+                        expected_currency=moneda_paypal,
 
-            except PayPalError as exc:
+                    )
 
-                raise CarritoError(str(exc))
+                except PayPalError as exc:
 
-            referencia_pago = captura.capture_id or captura.order_id or referencia_pago
+                    raise CarritoError(str(exc))
+
+                referencia_pago = captura.capture_id or captura.order_id or referencia_pago
 
             if Compra.objects.select_for_update().filter(referencia_pago=referencia_pago).exists():
 
@@ -2179,6 +2525,20 @@ def _procesar_compra(request, referencia_pago=None, datos_cliente=None):
 
     request.session.modified = True
 
+    _notificar_actores_compra(
+
+        datos_normalizados,
+
+        lineas,
+
+        total,
+
+        referencia_pago,
+
+        paso_moneda,
+
+    )
+
     return total
 
 
@@ -2189,6 +2549,7 @@ def _procesar_compra(request, referencia_pago=None, datos_cliente=None):
 
 def VistaCarrito(request):
 
+    """Muestra el carrito del usuario junto con la información de checkout."""
     cart = _get_cart(request)
 
     items, total, carrito_sin_fallos = _build_cart_items(cart)
@@ -2276,7 +2637,7 @@ def VistaCarrito(request):
 
     }
 
-    return render(request, "carrito.html", contexto)
+    return render(request, "public/carrito.html", contexto)
 
 
 
@@ -2288,6 +2649,7 @@ def VistaCarrito(request):
 
 def agregar_al_carrito(request, producto_id):
 
+    """Agrega un producto al carrito del usuario."""
     if obtener_rol_usuario(request.user) != "comprador":
 
         messages.error(request, "Tu rol no permite comprar en la tienda.")
@@ -2334,6 +2696,7 @@ def agregar_al_carrito(request, producto_id):
 
 def actualizar_carrito(request, producto_id):
 
+    """Actualiza las cantidades de un producto dentro del carrito."""
     is_json = request.headers.get("x-requested-with") == "XMLHttpRequest" or (request.content_type or "").startswith("application/json")
 
     if obtener_rol_usuario(request.user) != "comprador":
@@ -2470,6 +2833,7 @@ def actualizar_carrito(request, producto_id):
 
 def eliminar_del_carrito(request, producto_id):
 
+    """Elimina un producto del carrito."""
     is_json = request.headers.get("x-requested-with") == "XMLHttpRequest" or (request.content_type or "").startswith("application/json")
 
     cart = _get_cart(request)
@@ -2522,6 +2886,7 @@ def eliminar_del_carrito(request, producto_id):
 
 def paypal_crear_orden(request):
 
+    """Crea una orden de PayPal para el contenido del carrito."""
     if obtener_rol_usuario(request.user) != "comprador":
 
         return JsonResponse({"ok": False, "error": "Tu rol no permite comprar en la tienda."}, status=403)
@@ -2659,6 +3024,7 @@ def paypal_crear_orden(request):
 
 def finalizar_compra(request):
 
+    """Valida el carrito y crea la orden de compra definitiva."""
     content_type = request.content_type or ""
 
     is_json = content_type.startswith("application/json") or request.headers.get("x-requested-with") == "XMLHttpRequest"
@@ -2759,11 +3125,12 @@ def finalizar_compra(request):
 
 def carrito_gracias(request):
 
+    """Muestra la página de confirmación después de pagar."""
     total = request.session.pop("ultimo_total", None)
 
     checkout_info = request.session.pop("ultimo_checkout_info", None)
 
-    return render(request, "carrito_gracias.html", {"total": total, "checkout_info": checkout_info})
+    return render(request, "public/carrito_gracias.html", {"total": total, "checkout_info": checkout_info})
 
 
 
@@ -2772,13 +3139,13 @@ def carrito_gracias(request):
 
 
 
-# ============================================================
+                                                              
 
-#                    DASHBOARD VENDEDOR
+                                       
 
-#   - Vista y APIs 100% reales por usuario vendedor
+                                                   
 
-# ============================================================
+                                                              
 
 
 
@@ -2786,6 +3153,7 @@ def carrito_gracias(request):
 
 def VistaVendedor(request):
 
+    """Renderiza el panel privado para los vendedores."""
     vendedor = Vendedor.objects.filter(usuario=request.user).first()
 
     productos = Producto.objects.none()
@@ -2825,6 +3193,11 @@ def VistaVendedor(request):
 
 
         errores = []
+        if imagen:
+            try:
+                _validar_imagen_producto(imagen)
+            except ValidationError as exc:
+                errores.append(str(exc))
 
         if not nombre:
 
@@ -2844,7 +3217,7 @@ def VistaVendedor(request):
 
 
 
-        # Fecha de ingreso
+                          
 
         fecha_ingreso = None
 
@@ -2862,7 +3235,7 @@ def VistaVendedor(request):
 
 
 
-        # Precio
+                
 
         precio = None
 
@@ -2886,7 +3259,7 @@ def VistaVendedor(request):
 
 
 
-        # Existencias
+                     
 
         existencias = None
 
@@ -2930,7 +3303,7 @@ def VistaVendedor(request):
 
                     return redirect("dashboard_vendedor")
 
-                # Seguridad: solo editar propios
+                                                
 
                 if vendedor and p.vendedor_id and p.vendedor_id != vendedor.id:
 
@@ -3034,7 +3407,7 @@ def VistaVendedor(request):
 
     }
 
-    return render(request, "dashboard_vendedor.html", contexto)
+    return render(request, "dashboards/dashboard_vendedor.html", contexto)
 
 
 
@@ -3078,7 +3451,7 @@ def api_vendedor_resumen(request):
 
 
 
-    # Serie últimos 7 días (cronológico)
+                                        
 
     today = timezone.localdate()
 
@@ -3088,13 +3461,13 @@ def api_vendedor_resumen(request):
 
     mapa_dias = {v["fecha_venta"]: float(v["total"] or 0) for v in ventas_por_dia}
 
-    labels = [d.strftime("%a") for d in last7]  # Lun, Mar, ...
+    labels = [d.strftime("%a") for d in last7]                 
 
     data = [mapa_dias.get(d, 0) for d in last7]
 
 
 
-    # Top 5 categorías por monto
+                                
 
     por_categoria_qs = (
 
@@ -3132,7 +3505,7 @@ def api_vendedor_resumen(request):
 
         "ticket_promedio": ticket_prom,
 
-        "tasa_conversion": 2.4,        # placeholder hasta que tengas visitas/pedidos
+        "tasa_conversion": 2.4,                                                      
 
         "labels": labels,
 
@@ -3147,10 +3520,11 @@ def api_vendedor_resumen(request):
     })
 
 
-# --- Extensión con soporte de rango dinámico (7/14/30) ---
+                                                           
 @login_required
 @require_http_methods(["GET"])
 def api_vendedor_resumen_ext(request):
+    """Expone métricas extendidas del vendedor en JSON."""
     vendedor = Vendedor.objects.filter(usuario=request.user).first()
     if not vendedor:
         return HttpResponseForbidden("No es vendedor")
@@ -3281,11 +3655,11 @@ def api_vendedor_stock_resumen(request):
 
 
 
-    # Notificar por correo al vendedor si tiene productos críticos
+                                                                  
 
-    # Para evitar spam, limitamos el envío a una vez cada 12 horas por vendedor y sesión.
+                                                                                         
 
-    # Si se requiere persistencia global, conviene mover a un campo en BD o a un job periódico.
+                                                                                               
 
     if vendedor and criticos > 0:
         try:
@@ -3308,11 +3682,11 @@ def api_vendedor_stock_resumen(request):
                         can_send = True
 
                 if can_send:
-                    # Asunto mejorado
+                                     
                     asunto = "🔔 Alerta de stock bajo — EpicAnimes"
 
-                    # Construcción del cuerpo del mensaje
-                    # Nombre preferente: nombre completo > primer nombre > username
+                                                         
+                                                                                   
                     try:
                         nombre = (user.get_full_name() or "").strip()
                     except Exception:
@@ -3354,7 +3728,7 @@ def api_vendedor_stock_resumen(request):
 
                     cuerpo = "\n".join(lineas)
 
-                    # Envío del correo
+                                      
                     try:
                         send_mail(
                             asunto,
@@ -3363,7 +3737,7 @@ def api_vendedor_stock_resumen(request):
                             [email],
                             fail_silently=True
                         )
-                        # Registrar envío
+                                         
                         request.session[key] = now.isoformat()
                         request.session.modified = True
 
@@ -3373,7 +3747,7 @@ def api_vendedor_stock_resumen(request):
         except Exception as e:
             print(f"Error general en alerta de stock: {e}")
 
-    # Retorno JSON
+                  
     return JsonResponse({
         "valor_total": float(valor_total),
         "criticos": int(criticos),
@@ -3441,15 +3815,15 @@ def api_vendedor_producto_detalle(request, pk):
 
 
 
-# ============================================================
+                                                              
 
-#                   DASHBOARD ADMINISTRADOR
+                                           
 
-#   - Vista server-side (si la usas)
+                                    
 
-#   - APIs para JS del panel admin (gráficos/CRUD/stock)
+                                                        
 
-# ============================================================
+                                                              
 
 
 
@@ -3481,7 +3855,7 @@ def VistaAdministrador(request):
 
 
 
-    # Para una tabla server-side (opcional)
+                                           
 
     ventas_por_vendedor = (
 
@@ -3501,7 +3875,7 @@ def VistaAdministrador(request):
 
 
 
-    # Clientes activos vs inactivos (30 días)
+                                             
 
     hoy = timezone.localdate()
 
@@ -3523,7 +3897,7 @@ def VistaAdministrador(request):
 
 
 
-    # Productos con bajo stock
+                              
 
     productos_bajo_stock = Producto.objects.filter(existencias__lte=5).order_by("existencias", "nombre")
 
@@ -3555,24 +3929,25 @@ def VistaAdministrador(request):
 
     }
 
-    # Pre-render: lista de usuarios para poblar tablas si falla JS
+                                                                  
 
     contexto["usuarios_iniciales"] = []
 
     contexto["stock_inicial"] = []
 
-    return render(request, "dashboard_administrador.html", contexto)
+    return render(request, "dashboards/dashboard_administrador.html", contexto)
 
 
 
 
 
-# ----------------------- helpers comunes -----------------------
+                                                                 
 
 
 
 def _json_body(request):
 
+    """Intenta decodificar el cuerpo JSON de la solicitud."""
     try:
 
         return json.loads(request.body.decode("utf-8") or "{}")
@@ -3585,6 +3960,7 @@ def _json_body(request):
 
 def _bad_request(message: str):
 
+    """Devuelve una respuesta JSON de error con estado 400."""
     try:
 
         msg = str(message)
@@ -3593,7 +3969,7 @@ def _bad_request(message: str):
 
         msg = "bad_request"
 
-    # Log para depurar en consola del servidor
+                                              
 
     try:
 
@@ -3609,7 +3985,7 @@ def _bad_request(message: str):
 
 
 
-# ----------------------- STOCK ADMIN ---------------------------
+                                                                 
 
 
 
@@ -3713,6 +4089,7 @@ def api_admin_productos_bajo_stock(request):
 
 def api_admin_producto_detalle(request, pk):
 
+    """Devuelve la información detallada de un producto."""
     if not (request.user.is_staff or request.user.is_superuser):
 
         return HttpResponseForbidden("Solo admin")
@@ -3769,6 +4146,7 @@ def api_admin_producto_detalle(request, pk):
 
 def api_admin_producto_update_full(request, pk):
 
+    """Actualiza todos los campos editables de un producto."""
     if not (request.user.is_staff or request.user.is_superuser):
 
         return HttpResponseForbidden("Solo admin")
@@ -3820,7 +4198,10 @@ def api_admin_producto_update_full(request, pk):
             return HttpResponseBadRequest("existencias inválidas")
 
     if imagen is not None:
-
+        try:
+            _validar_imagen_producto(imagen)
+        except ValidationError as exc:
+            return HttpResponseBadRequest(str(exc))
         p.imagen = imagen
 
     p.save()
@@ -3837,6 +4218,7 @@ def api_admin_producto_update_full(request, pk):
 
 def api_admin_producto_delete(request, pk):
 
+    """Elimina un producto desde el panel administrativo."""
     if not (request.user.is_staff or request.user.is_superuser):
 
         return HttpResponseForbidden("Solo admin")
@@ -3961,7 +4343,7 @@ def api_admin_producto_update_stock(request, pk):
 
 
 
-# ------------------------ GRÁFICOS ADMIN -----------------------
+                                                                 
 
 
 
@@ -4149,7 +4531,7 @@ def api_admin_vendedores_estado(request):
 
 
 
-        # Global: incluye suspendidos como inactivos
+                                                    
 
         online = base.filter(is_active=True, last_login__gte=limite).count()
 
@@ -4161,7 +4543,7 @@ def api_admin_vendedores_estado(request):
 
 
 
-    # Modo legacy: habilitados vs deshabilitados
+                                                
 
     if vendedor_id:
 
@@ -4331,7 +4713,7 @@ def api_admin_top_productos_linea(request):
 
 
 
-    # Top productos por total en el periodo
+                                           
 
     top = (
 
@@ -4351,7 +4733,7 @@ def api_admin_top_productos_linea(request):
 
 
 
-    # Preparar labels por día
+                             
 
     dias = [desde + timedelta(days=i) for i in range(days)]
 
@@ -4359,7 +4741,7 @@ def api_admin_top_productos_linea(request):
 
 
 
-    # Mapa por producto->{fecha->total}
+                                       
 
     datasets = []
 
@@ -4389,7 +4771,7 @@ def api_admin_top_productos_linea(request):
 
 
 
-# ------------------------- CRUD ADMIN -------------------------
+                                                                
 
 
 
@@ -4419,11 +4801,11 @@ def api_admin_vendedores(request):
 
 
 
-    # ---------- LISTAR ----------
+                                  
 
     if request.method == "GET":
 
-        estado = request.GET.get("estado")  # "activo", "inactivo", "todos"/None
+        estado = request.GET.get("estado")                                      
 
         q = (request.GET.get("q") or "").strip()
 
@@ -4495,7 +4877,7 @@ def api_admin_vendedores(request):
 
 
 
-    # ---------- CREAR ----------
+                                 
 
     if request.method == "POST":
 
@@ -4519,7 +4901,7 @@ def api_admin_vendedores(request):
 
                 return _bad_request("username ya existe")
 
-            # email opcional: valida formato y unicidad si viene
+                                                                
 
             if email:
 
@@ -4535,7 +4917,7 @@ def api_admin_vendedores(request):
 
                     return _bad_request("email ya esta en uso")
 
-            # Validar la contraseña con las mismas reglas del registro
+                                                                      
 
             try:
 
@@ -4549,7 +4931,7 @@ def api_admin_vendedores(request):
 
             u = User.objects.create_user(username=username, email=email, password=password)
 
-            # Flags de rol opcionales (por defecto: Usuario)
+                                                            
 
             es_vendedor = bool(data.get("es_vendedor"))
 
@@ -4569,17 +4951,17 @@ def api_admin_vendedores(request):
 
                 u.groups.add(grupo)
 
-                # Algunos entornos heredan un campo legacy `umbral_critico` en la
-                # tabla del modelo Vendedor (NOT NULL sin default). Si existe,
-                # el get_or_create puede fallar. Intentamos normalmente y, si
-                # falla, insertamos con un valor por defecto seguro.
+                                                                                 
+                                                                              
+                                                                             
+                                                                    
                 try:
                     Vendedor.objects.get_or_create(usuario=u)
                 except Exception:
                     try:
                         with connection.cursor() as cur:
-                            # nombre de tabla por defecto: app_model
-                            # columnas basicas + umbral_critico con default 5
+                                                                    
+                                                                             
                             cur.execute(
                                 "INSERT INTO core_vendedor (usuario_id, telefono, direccion, fecha_ingreso, umbral_critico) "
                                 "VALUES (%s, %s, %s, CURRENT_DATE, %s)",
@@ -4588,7 +4970,7 @@ def api_admin_vendedores(request):
                     except Exception as e2:
                         return _bad_request(f"server: {e2}")
 
-                # Enviar correo de bienvenida al nuevo vendedor (si tiene email)
+                                                                                
 
                 try:
 
@@ -4618,7 +5000,7 @@ def api_admin_vendedores(request):
 
                 except Exception:
 
-                    # No bloquear creación si el correo falla
+                                                             
 
                     pass
 
@@ -4630,7 +5012,7 @@ def api_admin_vendedores(request):
 
 
 
-    # ---------- EDITAR ----------
+                                  
 
     if request.method in ("PUT", "PATCH"):
 
@@ -4650,7 +5032,7 @@ def api_admin_vendedores(request):
 
 
 
-        # Acción especial: resetear contraseña y devolverla en texto claro (solo admin)
+                                                                                       
 
         if data.get("reset_password"):
 
@@ -4728,7 +5110,7 @@ def api_admin_vendedores(request):
 
         if es_vendedor:
 
-            # Asegura registro de vendedor; ver comentario en el bloque POST.
+                                                                             
             try:
                 Vendedor.objects.get_or_create(usuario=u)
             except Exception:
@@ -4756,7 +5138,7 @@ def api_admin_vendedores(request):
 
 
 
-    # ---------- ACTIVAR / DESACTIVAR ----------
+                                                
 
     if request.method == "DELETE":
 
@@ -4808,11 +5190,11 @@ def api_admin_vendedores(request):
 
 
 
-# ============================================================
+                                                              
 
-#                REDIRECCIÓN INTELIGENTE POST-LOGIN
+                                                   
 
-# ============================================================
+                                                              
 
 
 
@@ -4820,6 +5202,7 @@ def api_admin_vendedores(request):
 
 def redireccion_usuario(request):
 
+    """Redirige al usuario al panel correspondiente según su rol."""
     user = request.user
 
     if user.is_superuser or user.is_staff:
@@ -4834,7 +5217,7 @@ def redireccion_usuario(request):
 
 
 
-# ------------------- ADMIN: Postulaciones vendedores -------------------
+                                                                         
 
 
 
@@ -4844,6 +5227,7 @@ def redireccion_usuario(request):
 
 def api_admin_postulaciones(request):
 
+    """Entrega las postulaciones de vendedores en formato JSON."""
     if not (request.user.is_staff or request.user.is_superuser):
 
         return HttpResponseForbidden("Solo admin")
@@ -4972,7 +5356,7 @@ def api_admin_postulaciones(request):
 
 
 
-# ========================== EXPORTS ===========================
+                                                                
 
 
 
@@ -4982,6 +5366,7 @@ def api_admin_postulaciones(request):
 
 def export_admin_postulaciones_csv(request):
 
+    """Genera un CSV con las postulaciones recibidas."""
     if not (request.user.is_staff or request.user.is_superuser):
 
         return HttpResponseForbidden("Solo admin")
@@ -5042,6 +5427,7 @@ def export_admin_postulaciones_csv(request):
 
 def export_admin_ventas_csv(request):
 
+    """Exporta las ventas en formato CSV para administradores."""
     if not (request.user.is_staff or request.user.is_superuser):
 
         return HttpResponseForbidden("Solo admin")
@@ -5114,8 +5500,9 @@ def export_admin_ventas_csv(request):
 
 def export_vendedor_inventario_csv(request):
 
-    # Solo vendedor
+                   
 
+    """Construye un CSV con el inventario del vendedor."""
     if not request.user.groups.filter(name="Vendedores").exists():
 
         return HttpResponseForbidden("Solo vendedores")
@@ -5154,6 +5541,7 @@ def export_vendedor_inventario_csv(request):
 
 def export_vendedor_ventas_csv(request):
 
+    """Exporta las ventas del vendedor en CSV."""
     if not request.user.groups.filter(name="Vendedores").exists():
 
         return HttpResponseForbidden("Solo vendedores")
@@ -5228,8 +5616,9 @@ def export_vendedor_ventas_csv(request):
 
 def api_vendedor_importar(request):
 
-    # Solo vendedor
+                   
 
+    """Permite cargar productos en lote para el vendedor autenticado."""
     if not request.user.groups.filter(name="Vendedores").exists():
 
         return HttpResponseForbidden("Solo vendedores")
@@ -5328,11 +5717,11 @@ def api_vendedor_importar(request):
 
 
 
-# =====================
+                       
 
-# Excel (.xlsx) exports
+                       
 
-# =====================
+                       
 
 @login_required
 
@@ -5340,6 +5729,7 @@ def api_vendedor_importar(request):
 
 def export_admin_postulaciones_xlsx(request):
 
+    """Genera un archivo XLSX de postulaciones."""
     if not (request.user.is_staff or request.user.is_superuser):
 
         return HttpResponseForbidden("Solo administradores")
@@ -5448,6 +5838,7 @@ def export_admin_postulaciones_xlsx(request):
 
 def export_admin_ventas_xlsx(request):
 
+    """Exporta las ventas en formato XLSX."""
     if not (request.user.is_staff or request.user.is_superuser):
 
         return HttpResponseForbidden("Solo administradores")
@@ -5548,6 +5939,7 @@ def export_admin_ventas_xlsx(request):
 
 def export_vendedor_inventario_xlsx(request):
 
+    """Genera un XLSX del inventario del vendedor."""
     if not request.user.groups.filter(name="Vendedores").exists():
 
         return HttpResponseForbidden("Solo vendedores")
@@ -5614,6 +6006,7 @@ def export_vendedor_inventario_xlsx(request):
 
 def export_vendedor_ventas_xlsx(request):
 
+    """Exporta las ventas del vendedor en XLSX."""
     if not request.user.groups.filter(name="Vendedores").exists():
 
         return HttpResponseForbidden("Solo vendedores")
@@ -5692,11 +6085,11 @@ def export_vendedor_ventas_xlsx(request):
 
 
 
-# ==========================
+                            
 
-# Importar Excel directo
+                        
 
-# ==========================
+                            
 
 @login_required
 
@@ -5704,6 +6097,7 @@ def export_vendedor_ventas_xlsx(request):
 
 def api_vendedor_importar_excel(request):
 
+    """Procesa archivos Excel para crear o actualizar productos."""
     if not request.user.groups.filter(name="Vendedores").exists():
 
         return HttpResponseForbidden("Solo vendedores")
@@ -5846,18 +6240,21 @@ def api_vendedor_importar_excel(request):
 
 class CoreLoginView(LoginView):
 
+    """Renderiza el formulario de inicio de sesión con verificación OTP."""
     template_name = 'registration/login.html'
 
     authentication_form = TwoFactorLoginForm
 
 
 class CustomPasswordResetView(PasswordResetView):
+    """Personaliza el restablecimiento de contraseña mostrando mensajes claros."""
     template_name = "registration/password_reset_form.html"
     email_template_name = "registration/password_reset_email.html"
     subject_template_name = "registration/password_reset_subject.txt"
     success_url = reverse_lazy("password_reset")
 
     def form_valid(self, form):
+        """Valida que exista un usuario asociado y entrega mensajes consistentes."""
         email = form.cleaned_data.get("email", "").strip()
         users = list(form.get_users(email))
         if not users:
@@ -5869,6 +6266,7 @@ class CustomPasswordResetView(PasswordResetView):
         return response
 
     def form_invalid(self, form):
+        """Refuerza los mensajes de error cuando el correo ingresado es inválido."""
         if form.errors.get("email"):
             messages.error(self.request, "Revisa el correo ingresado.")
         return super().form_invalid(form)
@@ -5880,6 +6278,7 @@ class CustomPasswordResetView(PasswordResetView):
 
 def VistaCarrito(request):
 
+    """Muestra el carrito del usuario junto con la información de checkout."""
     cart = _get_cart(request)
 
     items, total, carrito_sin_fallos = _build_cart_items(cart)
@@ -5970,7 +6369,7 @@ def VistaCarrito(request):
 
     }
 
-    return render(request, "carrito.html", contexto)
+    return render(request, "public/carrito.html", contexto)
 
 
 
@@ -5982,6 +6381,7 @@ def VistaCarrito(request):
 
 def agregar_al_carrito(request, producto_id):
 
+    """Agrega un producto al carrito del usuario."""
     if obtener_rol_usuario(request.user) != "comprador":
 
         messages.error(request, "Tu rol no permite comprar en la tienda.")
@@ -6028,6 +6428,7 @@ def agregar_al_carrito(request, producto_id):
 
 def actualizar_carrito(request, producto_id):
 
+    """Actualiza las cantidades de un producto dentro del carrito."""
     is_json = request.headers.get("x-requested-with") == "XMLHttpRequest" or (request.content_type or "").startswith("application/json")
 
     if obtener_rol_usuario(request.user) != "comprador":
@@ -6164,6 +6565,7 @@ def actualizar_carrito(request, producto_id):
 
 def eliminar_del_carrito(request, producto_id):
 
+    """Elimina un producto del carrito."""
     is_json = request.headers.get("x-requested-with") == "XMLHttpRequest" or (request.content_type or "").startswith("application/json")
 
     cart = _get_cart(request)
@@ -6216,6 +6618,7 @@ def eliminar_del_carrito(request, producto_id):
 
 def paypal_crear_orden(request):
 
+    """Crea una orden de PayPal para el contenido del carrito."""
     if obtener_rol_usuario(request.user) != "comprador":
 
         return JsonResponse({"ok": False, "error": "Tu rol no permite comprar en la tienda."}, status=403)
@@ -6353,6 +6756,7 @@ def paypal_crear_orden(request):
 
 def finalizar_compra(request):
 
+    """Valida el carrito y crea la orden de compra definitiva."""
     content_type = request.content_type or ""
 
     is_json = content_type.startswith("application/json") or request.headers.get("x-requested-with") == "XMLHttpRequest"
@@ -6453,11 +6857,12 @@ def finalizar_compra(request):
 
 def carrito_gracias(request):
 
+    """Muestra la página de confirmación después de pagar."""
     total = request.session.pop("ultimo_total", None)
 
     checkout_info = request.session.pop("ultimo_checkout_info", None)
 
-    return render(request, "carrito_gracias.html", {"total": total, "checkout_info": checkout_info})
+    return render(request, "public/carrito_gracias.html", {"total": total, "checkout_info": checkout_info})
 
 
 
@@ -6466,13 +6871,13 @@ def carrito_gracias(request):
 
 
 
-# ============================================================
+                                                              
 
-#                    DASHBOARD VENDEDOR
+                                       
 
-#   - Vista y APIs 100% reales por usuario vendedor
+                                                   
 
-# ============================================================
+                                                              
 
 
 
@@ -6480,6 +6885,7 @@ def carrito_gracias(request):
 
 def VistaVendedor(request):
 
+    """Renderiza el panel privado para los vendedores."""
     vendedor = Vendedor.objects.filter(usuario=request.user).first()
 
     productos = Producto.objects.none()
@@ -6519,6 +6925,11 @@ def VistaVendedor(request):
 
 
         errores = []
+        if imagen:
+            try:
+                _validar_imagen_producto(imagen)
+            except ValidationError as exc:
+                errores.append(str(exc))
 
         if not nombre:
 
@@ -6538,7 +6949,7 @@ def VistaVendedor(request):
 
 
 
-        # Fecha de ingreso
+                          
 
         fecha_ingreso = None
 
@@ -6556,7 +6967,7 @@ def VistaVendedor(request):
 
 
 
-        # Precio
+                
 
         precio = None
 
@@ -6580,7 +6991,7 @@ def VistaVendedor(request):
 
 
 
-        # Existencias
+                     
 
         existencias = None
 
@@ -6624,7 +7035,7 @@ def VistaVendedor(request):
 
                     return redirect("dashboard_vendedor")
 
-                # Seguridad: solo editar propios
+                                                
 
                 if vendedor and p.vendedor_id and p.vendedor_id != vendedor.id:
 
@@ -6728,7 +7139,7 @@ def VistaVendedor(request):
 
     }
 
-    return render(request, "dashboard_vendedor.html", contexto)
+    return render(request, "dashboards/dashboard_vendedor.html", contexto)
 
 
 
@@ -6772,7 +7183,7 @@ def api_vendedor_resumen(request):
 
 
 
-    # Serie últimos 7 días (cronológico)
+                                        
 
     today = timezone.localdate()
 
@@ -6782,13 +7193,13 @@ def api_vendedor_resumen(request):
 
     mapa_dias = {v["fecha_venta"]: float(v["total"] or 0) for v in ventas_por_dia}
 
-    labels = [d.strftime("%a") for d in last7]  # Lun, Mar, ...
+    labels = [d.strftime("%a") for d in last7]                 
 
     data = [mapa_dias.get(d, 0) for d in last7]
 
 
 
-    # Top 5 categorías por monto
+                                
 
     por_categoria_qs = (
 
@@ -6826,7 +7237,7 @@ def api_vendedor_resumen(request):
 
         "ticket_promedio": ticket_prom,
 
-        "tasa_conversion": 2.4,        # placeholder hasta que tengas visitas/pedidos
+        "tasa_conversion": 2.4,                                                      
 
         "labels": labels,
 
@@ -6912,11 +7323,11 @@ def api_vendedor_stock_resumen(request):
 
 
 
-    # Notificar por correo al vendedor si tiene productos críticos
+                                                                  
 
-    # Para evitar spam, limitamos el envío a una vez cada 12 horas por vendedor y sesión.
+                                                                                         
 
-    # Si se requiere persistencia global, conviene mover a un campo en BD o a un job periódico.
+                                                                                               
 
     if vendedor and criticos > 0:
         try:
@@ -6939,11 +7350,11 @@ def api_vendedor_stock_resumen(request):
                         can_send = True
 
                 if can_send:
-                    # Asunto mejorado
+                                     
                     asunto = "🔔 Alerta de stock bajo — EpicAnimes"
 
-                    # Construcción del cuerpo del mensaje
-                    # Nombre preferente: nombre completo > primer nombre > username
+                                                         
+                                                                                   
                     try:
                         nombre = (user.get_full_name() or "").strip()
                     except Exception:
@@ -6985,7 +7396,7 @@ def api_vendedor_stock_resumen(request):
 
                     cuerpo = "\n".join(lineas)
 
-                    # Envío del correo
+                                      
                     try:
                         send_mail(
                             asunto,
@@ -6994,7 +7405,7 @@ def api_vendedor_stock_resumen(request):
                             [email],
                             fail_silently=True
                         )
-                        # Registrar envío
+                                         
                         request.session[key] = now.isoformat()
                         request.session.modified = True
 
@@ -7004,7 +7415,7 @@ def api_vendedor_stock_resumen(request):
         except Exception as e:
             print(f"Error general en alerta de stock: {e}")
 
-    # Retorno JSON
+                  
     return JsonResponse({
         "valor_total": float(valor_total),
         "criticos": int(criticos),
@@ -7072,15 +7483,15 @@ def api_vendedor_producto_detalle(request, pk):
 
 
 
-# ============================================================
+                                                              
 
-#                   DASHBOARD ADMINISTRADOR
+                                           
 
-#   - Vista server-side (si la usas)
+                                    
 
-#   - APIs para JS del panel admin (gráficos/CRUD/stock)
+                                                        
 
-# ============================================================
+                                                              
 
 
 
@@ -7112,7 +7523,7 @@ def VistaAdministrador(request):
 
 
 
-    # Para una tabla server-side (opcional)
+                                           
 
     ventas_por_vendedor = (
 
@@ -7132,7 +7543,7 @@ def VistaAdministrador(request):
 
 
 
-    # Clientes activos vs inactivos (30 días)
+                                             
 
     hoy = timezone.localdate()
 
@@ -7154,7 +7565,7 @@ def VistaAdministrador(request):
 
 
 
-    # Productos con bajo stock
+                              
 
     productos_bajo_stock = Producto.objects.filter(existencias__lte=5).order_by("existencias", "nombre")
 
@@ -7186,24 +7597,25 @@ def VistaAdministrador(request):
 
     }
 
-    # Pre-render: lista de usuarios para poblar tablas si falla JS
+                                                                  
 
     contexto["usuarios_iniciales"] = []
 
     contexto["stock_inicial"] = []
 
-    return render(request, "dashboard_administrador.html", contexto)
+    return render(request, "dashboards/dashboard_administrador.html", contexto)
 
 
 
 
 
-# ----------------------- helpers comunes -----------------------
+                                                                 
 
 
 
 def _json_body(request):
 
+    """Intenta decodificar el cuerpo JSON de la solicitud."""
     try:
 
         return json.loads(request.body.decode("utf-8") or "{}")
@@ -7216,6 +7628,7 @@ def _json_body(request):
 
 def _bad_request(message: str):
 
+    """Devuelve una respuesta JSON de error con estado 400."""
     try:
 
         msg = str(message)
@@ -7224,7 +7637,7 @@ def _bad_request(message: str):
 
         msg = "bad_request"
 
-    # Log para depurar en consola del servidor
+                                              
 
     try:
 
@@ -7240,7 +7653,7 @@ def _bad_request(message: str):
 
 
 
-# ----------------------- STOCK ADMIN ---------------------------
+                                                                 
 
 
 
@@ -7344,6 +7757,7 @@ def api_admin_productos_bajo_stock(request):
 
 def api_admin_producto_detalle(request, pk):
 
+    """Devuelve la información detallada de un producto."""
     if not (request.user.is_staff or request.user.is_superuser):
 
         return HttpResponseForbidden("Solo admin")
@@ -7400,6 +7814,7 @@ def api_admin_producto_detalle(request, pk):
 
 def api_admin_producto_update_full(request, pk):
 
+    """Actualiza todos los campos editables de un producto."""
     if not (request.user.is_staff or request.user.is_superuser):
 
         return HttpResponseForbidden("Solo admin")
@@ -7451,7 +7866,10 @@ def api_admin_producto_update_full(request, pk):
             return HttpResponseBadRequest("existencias inválidas")
 
     if imagen is not None:
-
+        try:
+            _validar_imagen_producto(imagen)
+        except ValidationError as exc:
+            return HttpResponseBadRequest(str(exc))
         p.imagen = imagen
 
     p.save()
@@ -7468,6 +7886,7 @@ def api_admin_producto_update_full(request, pk):
 
 def api_admin_producto_delete(request, pk):
 
+    """Elimina un producto desde el panel administrativo."""
     if not (request.user.is_staff or request.user.is_superuser):
 
         return HttpResponseForbidden("Solo admin")
@@ -7592,7 +8011,7 @@ def api_admin_producto_update_stock(request, pk):
 
 
 
-# ------------------------ GRÁFICOS ADMIN -----------------------
+                                                                 
 
 
 
@@ -7780,7 +8199,7 @@ def api_admin_vendedores_estado(request):
 
 
 
-        # Global: incluye suspendidos como inactivos
+                                                    
 
         online = base.filter(is_active=True, last_login__gte=limite).count()
 
@@ -7792,7 +8211,7 @@ def api_admin_vendedores_estado(request):
 
 
 
-    # Modo legacy: habilitados vs deshabilitados
+                                                
 
     if vendedor_id:
 
@@ -7962,7 +8381,7 @@ def api_admin_top_productos_linea(request):
 
 
 
-    # Top productos por total en el periodo
+                                           
 
     top = (
 
@@ -7982,7 +8401,7 @@ def api_admin_top_productos_linea(request):
 
 
 
-    # Preparar labels por día
+                             
 
     dias = [desde + timedelta(days=i) for i in range(days)]
 
@@ -7990,7 +8409,7 @@ def api_admin_top_productos_linea(request):
 
 
 
-    # Mapa por producto->{fecha->total}
+                                       
 
     datasets = []
 
@@ -8020,7 +8439,7 @@ def api_admin_top_productos_linea(request):
 
 
 
-# ------------------------- CRUD ADMIN -------------------------
+                                                                
 
 
 
@@ -8050,11 +8469,11 @@ def api_admin_vendedores(request):
 
 
 
-    # ---------- LISTAR ----------
+                                  
 
     if request.method == "GET":
 
-        estado = request.GET.get("estado")  # "activo", "inactivo", "todos"/None
+        estado = request.GET.get("estado")                                      
 
         q = (request.GET.get("q") or "").strip()
 
@@ -8126,7 +8545,7 @@ def api_admin_vendedores(request):
 
 
 
-    # ---------- CREAR ----------
+                                 
 
     if request.method == "POST":
 
@@ -8150,7 +8569,7 @@ def api_admin_vendedores(request):
 
                 return _bad_request("username ya existe")
 
-            # email opcional: valida formato y unicidad si viene
+                                                                
 
             if email:
 
@@ -8166,7 +8585,7 @@ def api_admin_vendedores(request):
 
                     return _bad_request("email ya esta en uso")
 
-            # Validar la contraseña con las mismas reglas del registro
+                                                                      
 
             try:
 
@@ -8180,7 +8599,7 @@ def api_admin_vendedores(request):
 
             u = User.objects.create_user(username=username, email=email, password=password)
 
-            # Flags de rol opcionales (por defecto: Usuario)
+                                                            
 
             es_vendedor = bool(data.get("es_vendedor"))
 
@@ -8213,7 +8632,7 @@ def api_admin_vendedores(request):
                     except Exception as e2:
                         return _bad_request(f"server: {e2}")
 
-                # Enviar correo de bienvenida al nuevo vendedor (si tiene email)
+                                                                                
 
                 try:
 
@@ -8243,7 +8662,7 @@ def api_admin_vendedores(request):
 
                 except Exception:
 
-                    # No bloquear creación si el correo falla
+                                                             
 
                     pass
 
@@ -8255,7 +8674,7 @@ def api_admin_vendedores(request):
 
 
 
-    # ---------- EDITAR ----------
+                                  
 
     if request.method in ("PUT", "PATCH"):
 
@@ -8275,7 +8694,7 @@ def api_admin_vendedores(request):
 
 
 
-        # Acción especial: resetear contraseña y devolverla en texto claro (solo admin)
+                                                                                       
 
         if data.get("reset_password"):
 
@@ -8380,7 +8799,7 @@ def api_admin_vendedores(request):
 
 
 
-    # ---------- ACTIVAR / DESACTIVAR ----------
+                                                
 
     if request.method == "DELETE":
 
@@ -8432,11 +8851,11 @@ def api_admin_vendedores(request):
 
 
 
-# ============================================================
+                                                              
 
-#                REDIRECCIÓN INTELIGENTE POST-LOGIN
+                                                   
 
-# ============================================================
+                                                              
 
 
 
@@ -8444,6 +8863,7 @@ def api_admin_vendedores(request):
 
 def redireccion_usuario(request):
 
+    """Redirige al usuario al panel correspondiente según su rol."""
     user = request.user
 
     if user.is_superuser or user.is_staff:
@@ -8458,7 +8878,7 @@ def redireccion_usuario(request):
 
 
 
-# ------------------- ADMIN: Postulaciones vendedores -------------------
+                                                                         
 
 
 
@@ -8468,6 +8888,7 @@ def redireccion_usuario(request):
 
 def api_admin_postulaciones(request):
 
+    """Entrega las postulaciones de vendedores en formato JSON."""
     if not (request.user.is_staff or request.user.is_superuser):
 
         return HttpResponseForbidden("Solo admin")
@@ -8596,7 +9017,7 @@ def api_admin_postulaciones(request):
 
 
 
-# ========================== EXPORTS ===========================
+                                                                
 
 
 
@@ -8606,6 +9027,7 @@ def api_admin_postulaciones(request):
 
 def export_admin_postulaciones_csv(request):
 
+    """Genera un CSV con las postulaciones recibidas."""
     if not (request.user.is_staff or request.user.is_superuser):
 
         return HttpResponseForbidden("Solo admin")
@@ -8666,6 +9088,7 @@ def export_admin_postulaciones_csv(request):
 
 def export_admin_ventas_csv(request):
 
+    """Exporta las ventas en formato CSV para administradores."""
     if not (request.user.is_staff or request.user.is_superuser):
 
         return HttpResponseForbidden("Solo admin")
@@ -8738,8 +9161,9 @@ def export_admin_ventas_csv(request):
 
 def export_vendedor_inventario_csv(request):
 
-    # Solo vendedor
+                   
 
+    """Construye un CSV con el inventario del vendedor."""
     if not request.user.groups.filter(name="Vendedores").exists():
 
         return HttpResponseForbidden("Solo vendedores")
@@ -8778,6 +9202,7 @@ def export_vendedor_inventario_csv(request):
 
 def export_vendedor_ventas_csv(request):
 
+    """Exporta las ventas del vendedor en CSV."""
     if not request.user.groups.filter(name="Vendedores").exists():
 
         return HttpResponseForbidden("Solo vendedores")
@@ -8852,8 +9277,9 @@ def export_vendedor_ventas_csv(request):
 
 def api_vendedor_importar(request):
 
-    # Solo vendedor
+                   
 
+    """Permite cargar productos en lote para el vendedor autenticado."""
     if not request.user.groups.filter(name="Vendedores").exists():
 
         return HttpResponseForbidden("Solo vendedores")
@@ -8952,11 +9378,11 @@ def api_vendedor_importar(request):
 
 
 
-# =====================
+                       
 
-# Excel (.xlsx) exports
+                       
 
-# =====================
+                       
 
 @login_required
 
@@ -8964,6 +9390,7 @@ def api_vendedor_importar(request):
 
 def export_admin_postulaciones_xlsx(request):
 
+    """Genera un archivo XLSX de postulaciones."""
     if not (request.user.is_staff or request.user.is_superuser):
 
         return HttpResponseForbidden("Solo administradores")
@@ -9072,6 +9499,7 @@ def export_admin_postulaciones_xlsx(request):
 
 def export_admin_ventas_xlsx(request):
 
+    """Exporta las ventas en formato XLSX."""
     if not (request.user.is_staff or request.user.is_superuser):
 
         return HttpResponseForbidden("Solo administradores")
@@ -9172,6 +9600,7 @@ def export_admin_ventas_xlsx(request):
 
 def export_vendedor_inventario_xlsx(request):
 
+    """Genera un XLSX del inventario del vendedor."""
     if not request.user.groups.filter(name="Vendedores").exists():
 
         return HttpResponseForbidden("Solo vendedores")
@@ -9238,6 +9667,7 @@ def export_vendedor_inventario_xlsx(request):
 
 def export_vendedor_ventas_xlsx(request):
 
+    """Exporta las ventas del vendedor en XLSX."""
     if not request.user.groups.filter(name="Vendedores").exists():
 
         return HttpResponseForbidden("Solo vendedores")
@@ -9316,11 +9746,11 @@ def export_vendedor_ventas_xlsx(request):
 
 
 
-# ==========================
+                            
 
-# Importar Excel directo
+                        
 
-# ==========================
+                            
 
 @login_required
 
@@ -9328,6 +9758,7 @@ def export_vendedor_ventas_xlsx(request):
 
 def api_vendedor_importar_excel(request):
 
+    """Procesa archivos Excel para crear o actualizar productos."""
     if not request.user.groups.filter(name="Vendedores").exists():
 
         return HttpResponseForbidden("Solo vendedores")
@@ -9470,6 +9901,7 @@ def api_vendedor_importar_excel(request):
 
 class CoreLoginView(LoginView):
 
+    """Renderiza el formulario de inicio de sesión con verificación OTP."""
     template_name = 'registration/login.html'
 
     authentication_form = TwoFactorLoginForm
@@ -9497,7 +9929,7 @@ def api_admin_ventas_por_usuario(request):
     if not (request.user.is_staff or request.user.is_superuser):
         return HttpResponseForbidden("Solo admin")
 
-    # Rango y top
+                 
     try:
         days = int(request.GET.get("days", 30))
     except (TypeError, ValueError):
@@ -9513,7 +9945,7 @@ def api_admin_ventas_por_usuario(request):
     hoy = timezone.localdate()
     desde = hoy - timedelta(days=days - 1)
 
-    # Ventas (a partir de Compras) por usuario
+                                              
     compras = (
         Compra.objects
         .filter(fecha_compra__gte=desde, fecha_compra__lte=hoy, usuario__isnull=False)
@@ -9528,7 +9960,7 @@ def api_admin_ventas_por_usuario(request):
     labels = [row["usuario__username"] or f"Usuario {row['usuario_id']}" for row in compras]
     data = [float(row["total"] or 0) for row in compras]
 
-    # ---- Conteos por rol (para tarjetas laterales) ----
+                                                         
     presence = (request.GET.get("presence") == "1")
     if presence:
         try:
@@ -9558,7 +9990,7 @@ def api_admin_ventas_por_usuario(request):
         "administradores": counts_for(admins),
     }
 
-    # Totales globales del periodo (no slo top)
+                                                
     agg_global = (
         Compra.objects
         .filter(fecha_compra__gte=desde, fecha_compra__lte=hoy)
@@ -9573,7 +10005,7 @@ def api_admin_ventas_por_usuario(request):
     compradores_distintos = int(agg_global.get("compradores") or 0)
     avg_ticket = float(total_ventas / ordenes_total) if ordenes_total else 0.0
 
-    # Top 3 compradores con datos de rdenes
+                                            
     top3 = [
         {
             "name": row["usuario__username"] or f"Usuario {row['usuario_id']}",
@@ -9628,7 +10060,7 @@ def api_admin_ventas_actividad(request):
     dias = [desde + timedelta(days=i) for i in range(days)]
     labels = [d.isoformat() for d in dias]
 
-    # Ventas por día (suma CLP)
+                               
     ventas_qs = (
         Venta.objects
         .filter(fecha_venta__gte=desde, fecha_venta__lte=hoy)
@@ -9637,7 +10069,7 @@ def api_admin_ventas_actividad(request):
     )
     ventas_map = {row["fecha_venta"].isoformat(): float(row["t"] or 0) for row in ventas_qs}
 
-    # Órdenes por día (conteo de compras)
+                                         
     ordenes_qs = (
         Compra.objects
         .filter(fecha_compra__gte=desde, fecha_compra__lte=hoy)
@@ -9646,7 +10078,7 @@ def api_admin_ventas_actividad(request):
     )
     ordenes_map = {row["fecha_compra"].isoformat(): int(row["c"] or 0) for row in ordenes_qs}
 
-    # Vendedores activos por día (nombres)
+                                          
     vend_dia_qs = (
         Venta.objects
         .filter(fecha_venta__gte=desde, fecha_venta__lte=hoy)

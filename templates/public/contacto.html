@@ -1,0 +1,213 @@
+{% load static %}
+<!DOCTYPE html>
+<!-- Recoge los datos de contacto y muestra la información de soporte. -->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EpicAnimes | Contáctanos</title>
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="{% static 'css/base/index.css' %}?v=4">
+  <link rel="stylesheet" href="{% static 'css/pages/contacto.css' %}?v=2">
+  <link rel="stylesheet" href="{% static 'css/base/chatbot.css' %}?v=2">
+</head>
+<body class="contact-page">
+  <canvas id="stars" aria-hidden="true"></canvas>
+
+  {% include 'includes/navbar.html' with nav_page='contacto' %}
+
+  <main class="contact-shell">
+    <section class="contact-intro glass">
+      <div class="contact-intro__copy">
+        <p class="pill"><i class="fa fa-handshake"></i> Postula como vendedor</p>
+        <h1>Conversemos de tu tienda</h1>
+        <p class="muted">
+          Revisamos cada postulación de forma personalizada. Cuéntanos quién eres y qué buscas para que podamos
+          integrarte al ecosistema de EpicAnimes.
+        </p>
+        <ul class="contact-highlights">
+          <li><i class="fa fa-rocket"></i> Onboarding guiado y métricas en tu dashboard.</li>
+          <li><i class="fa fa-shield-heart"></i> Equipo humano validando cada solicitud.</li>
+          <li><i class="fa fa-bolt"></i> Catálogo listo para vender en menos de 48h hábiles.</li>
+        </ul>
+      </div>
+      <div class="contact-meta">
+        <div>
+          <span class="meta-label">Tiempo de respuesta</span>
+          <strong>24-48h hábiles</strong>
+        </div>
+        <div>
+          <span class="meta-label">Sellers activos</span>
+          <strong>+140</strong>
+        </div>
+      </div>
+    </section>
+
+    <section class="contact-grid">
+      <div class="glass contact-card" id="postulacion">
+        <div class="contact-card__header">
+          <h2>Postula ahora</h2>
+          <p class="muted">Completa todos los campos para acelerar la revisión.</p>
+        </div>
+
+        {% if messages %}
+          <div class="contact-messages">
+            {% for message in messages %}
+              <div class="message message--{{ message.tags|default:'info' }}">
+                <i class="fa fa-circle-info"></i>
+                <span>{{ message }}</span>
+              </div>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <form method="post" class="contact-form" novalidate>
+          {% csrf_token %}
+          {% if form.non_field_errors %}
+            <div class="message message--warning">
+              <i class="fa fa-circle-exclamation"></i>
+              <span>
+                {% for error in form.non_field_errors %}
+                  {{ error }}{% if not forloop.last %}<br>{% endif %}
+                {% endfor %}
+              </span>
+            </div>
+          {% endif %}
+
+          <div class="form-grid">
+            <div class="field">
+              <span>{{ form.nombre.label }}</span>
+              <input type="text" name="nombre" id="{{ form.nombre.id_for_label }}" value="{{ form.nombre.value|default:'' }}" placeholder="Tu nombre" required>
+              {% if form.nombre.errors %}
+                <div class="field-error">{{ form.nombre.errors|striptags }}</div>
+              {% endif %}
+            </div>
+            <div class="field">
+              <span>{{ form.email.label }}</span>
+              <input type="email" name="email" id="{{ form.email.id_for_label }}" value="{{ form.email.value|default:'' }}" placeholder="tu@correo.com" required>
+              {% if form.email.errors %}
+                <div class="field-error">{{ form.email.errors|striptags }}</div>
+              {% endif %}
+            </div>
+            <div class="field">
+              <span>{{ form.telefono.label }}</span>
+              <input type="text" name="telefono" id="{{ form.telefono.id_for_label }}" value="{{ form.telefono.value|default:'' }}" placeholder="+56 9 1234 5678" required>
+              {% if form.telefono.errors %}
+                <div class="field-error">{{ form.telefono.errors|striptags }}</div>
+              {% endif %}
+            </div>
+            <div class="field">
+              <span>{{ form.tienda.label }}</span>
+              <input type="text" name="tienda" id="{{ form.tienda.id_for_label }}" value="{{ form.tienda.value|default:'' }}" placeholder="Nombre de tu marca" required>
+              {% if form.tienda.errors %}
+                <div class="field-error">{{ form.tienda.errors|striptags }}</div>
+              {% endif %}
+            </div>
+            <div class="field full">
+              <span>{{ form.instagram.label }}</span>
+              <input type="url" name="instagram" id="{{ form.instagram.id_for_label }}" value="{{ form.instagram.value|default:'' }}" placeholder="https://instagram.com/tu_tienda">
+              {% if form.instagram.errors %}
+                <div class="field-error">{{ form.instagram.errors|striptags }}</div>
+              {% endif %}
+            </div>
+            <div class="field full">
+              <span>{{ form.mensaje.label }}</span>
+              <textarea name="mensaje" id="{{ form.mensaje.id_for_label }}" placeholder="Cuéntanos por qué quieres vender con nosotros" required>{{ form.mensaje.value|default:'' }}</textarea>
+              {% if form.mensaje.errors %}
+                <div class="field-error">{{ form.mensaje.errors|striptags }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <button type="submit" class="btn contact-submit">Enviar postulación</button>
+        </form>
+      </div>
+
+      <aside class="glass contact-info-card">
+        <h2>Información de contacto</h2>
+        <p class="muted">Escríbenos o agenda una llamada. Estamos atentos al correo y a nuestras redes.</p>
+
+        <ul class="contact-info">
+          <li>
+            <span class="contact-icon"><i class="fa fa-envelope"></i></span>
+            <div>
+              <p class="label">Correo</p>
+              <a href="mailto:epicanimes@gmail.com">epicanimes@gmail.com</a>
+            </div>
+          </li>
+          <li>
+            <span class="contact-icon"><i class="fa fa-phone"></i></span>
+            <div>
+              <p class="label">Teléfono</p>
+              <span>+56 9 5555 5555</span>
+            </div>
+          </li>
+          <li>
+            <span class="contact-icon"><i class="fa fa-location-dot"></i></span>
+            <div>
+              <p class="label">Oficina</p>
+              <span>Paseo Concha y Toro 93, Local 5, Puente Alto, RM.</span>
+            </div>
+          </li>
+        </ul>
+
+        <div class="contact-socials">
+          <span class="label">Redes sociales</span>
+          <div class="social-links">
+            <a class="social instagram" href="https://www.instagram.com/_epic_animes?utm_source=ig_web_button_share_sheet&igsh=ZDNlZDc0MzIxNw==" target="_blank" rel="noreferrer">
+              <i class="fab fa-instagram"></i> Instagram
+            </a>
+            <a class="social facebook" href="#" target="_blank" rel="noreferrer">
+              <i class="fab fa-facebook"></i> Facebook
+            </a>
+            <a class="social tiktok" href="https://www.tiktok.com/@_epic_animes" target="_blank" rel="noreferrer">
+              <i class="fab fa-tiktok"></i> TikTok
+            </a>
+          </div>
+        </div>
+
+        <div id="contacto-newsletter" class="contact-newsletter">
+          <div>
+            <p class="pill pill--soft"><i class="fa fa-bell"></i> Newsletter</p>
+            <h3 class="contact-newsletter__title">Suscríbete a las alertas</h3>
+            <p class="muted text-small">Entérate de nuevas convocatorias, workshops para sellers y mejoras de la plataforma.</p>
+          </div>
+          <form method="post" action="{% url 'newsletter_suscribir' %}" class="contact-newsletter__form">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+            <input type="hidden" name="next_anchor" value="contacto-newsletter">
+            <input type="hidden" name="segmento" value="contacto">
+            <label class="sr-only" for="contact-newsletter-email">Correo electrónico</label>
+            <input id="contact-newsletter-email" name="newsletter_email" type="email" placeholder="tu@correo.com" required>
+            <button type="submit" class="btn btn--primary">Quiero recibir novedades</button>
+          </form>
+        </div>
+      </aside>
+    </section>
+  </main>
+
+  <footer class="footer glass page-footer">
+    <p>&copy; <span id="currentYear"></span> EpicAnimes — Marketplace otaku con pagos seguros.</p>
+    <nav class="footer__links" aria-label="Enlaces legales">
+      <a href="{% url 'terminos' %}">Términos</a>
+      <a href="{% url 'contacto' %}#postulacion">Soporte</a>
+      <a href="{% url 'sobre_nosotros' %}">Nosotros</a>
+    </nav>
+  </footer>
+
+  {% include 'includes/chatbot_popup.html' %}
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="{% static 'js/site/stars-bg.js' %}" defer></script>
+  <script src="{% static 'js/site/chatbot.js' %}?v=2" defer></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const year = document.getElementById('currentYear');
+      if (year) year.textContent = new Date().getFullYear();
+    });
+  </script>
+</body>
+</html>

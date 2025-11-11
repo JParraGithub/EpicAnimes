@@ -1,0 +1,132 @@
+{% load static %}
+<!DOCTYPE html>
+<!-- Explica la historia y valores de EpicAnimes. -->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sobre Nosotros | EpicAnimes</title>
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;600;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="{% static 'css/base/index.css' %}?v=4">
+  <link rel="stylesheet" href="{% static 'css/pages/sobre_nosotros.css' %}?v=3">
+  <link rel="stylesheet" href="{% static 'css/base/chatbot.css' %}?v=2">
+</head>
+<body class="page page--about">
+  <canvas id="stars" aria-hidden="true"></canvas>
+
+  {% include 'includes/navbar.html' with nav_page='sobre_nosotros' %}
+
+  <main class="page-shell">
+    <section class="about-hero glass">
+      <div class="about-hero__text">
+        <p class="pill"><i class="fa fa-heart"></i> ADN otaku</p>
+        <h1>Sobre <span>EpicAnimes</span></h1>
+        <p class="lead">
+          Somos una startup chilena que conecta fanáticos, coleccionistas y tiendas especializadas en un entorno
+          seguro, auténtico y acompañado por IA en cada paso de la compra.
+        </p>
+        <div class="hero-stats">
+          <article>
+            <strong>+120K</strong>
+            <span>Visitas mensuales</span>
+          </article>
+          <article>
+            <strong>98%</strong>
+            <span>Satisfacción en soporte</span>
+          </article>
+          <article>
+            <strong>12</strong>
+            <span>Equipos aliados en LATAM</span>
+          </article>
+        </div>
+      </div>
+      <div class="hero-card">
+        <p class="hero-card__title">Lo que nos mueve</p>
+        <ul>
+          <li><i class="fa fa-shield-halved"></i> Capa de seguridad bancaria y monitoreo 24/7.</li>
+          <li><i class="fa fa-robot"></i> Automatización de inventarios y chatbot contextual.</li>
+          <li><i class="fa fa-people-group"></i> Comunidad moderada por fans y sellers certificados.</li>
+        </ul>
+      </div>
+    </section>
+
+    <section class="about-values">
+      <article class="value-card glass">
+        <i class="fa fa-bolt"></i>
+        <h3>Innovación otaku</h3>
+        <p>Integramos IA, dashboards y automatización para transformar la experiencia de compra y venta.</p>
+      </article>
+      <article class="value-card glass">
+        <i class="fa fa-shield"></i>
+        <h3>Seguridad y confianza</h3>
+        <p>Operamos con cifrado TLS 1.3, autenticación multifactor y lineamientos OWASP en todo el stack.</p>
+      </article>
+      <article class="value-card glass">
+        <i class="fa fa-comments"></i>
+        <h3>Comunidad</h3>
+        <p>Co-creamos roadmaps con vendedores y fans para fortalecer el comercio otaku en la región.</p>
+      </article>
+    </section>
+
+    <section class="about-grid glass">
+      <article>
+        <h2>Nuestra misión</h2>
+        <p>
+          Democratizar el acceso a productos originales mediante tecnología de vanguardia, logística integrada y procesos
+          responsables que protegen a fans y vendedores.
+        </p>
+      </article>
+      <article>
+        <h2>Visión</h2>
+        <p>
+          Convertirnos en el marketplace líder en Latinoamérica, reconocido por su seguridad, personalización y cercanía
+          con la cultura japonesa.
+        </p>
+      </article>
+      <article>
+        <h2>Equipo y cultura</h2>
+        <p>
+          Somos un equipo multidisciplinario que itera con metodologías ágiles, retrospectivas constantes y métricas
+          claras para cada release. Si quieres unirte como seller o partner, <a href="{% url 'contacto' %}">contáctanos</a>.
+        </p>
+      </article>
+    </section>
+
+    <section class="about-timeline glass">
+      <h2>Hitos rápidos</h2>
+      <div class="timeline">
+        <article>
+          <span>2022</span>
+          <p>Lanzamos la primera beta cerrada y conectamos a 30 coleccionistas premium.</p>
+        </article>
+        <article>
+          <span>2023</span>
+          <p>Activamos PayPal, chatbot propio y dashboards para vendedores certificados.</p>
+        </article>
+        <article>
+          <span>2024</span>
+          <p>Escalamos infraestructura, abrimos la API para partners y duplicamos la comunidad.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer glass page-footer">
+    <p>&copy; <span id="year"></span> EpicAnimes — Marketplace otaku.</p>
+    <nav class="footer__links">
+      <a href="{% url 'index' %}#catalogo">Catálogo</a>
+      <a href="{% url 'terminos' %}">Términos</a>
+      <a href="{% url 'contacto' %}">Contacto</a>
+    </nav>
+  </footer>
+
+  <script src="{% static 'js/site/stars-bg.js' %}" defer></script>
+  <script src="{% static 'js/site/page-shared.js' %}" defer></script>
+  {% include 'includes/chatbot_popup.html' %}
+  <script src="{% static 'js/site/chatbot.js' %}?v=2" defer></script>
+</body>
+</html>

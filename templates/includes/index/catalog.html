@@ -1,3 +1,4 @@
+<!-- Lista los productos destacados dentro del landing. -->
 <section id="catalogo" class="section alt" data-section="catalogo">
   <div class="section__header catalog-header">
     <div>
@@ -33,9 +34,9 @@
       <label>
         <span>Categoría</span>
         <select name="categoria" id="categoriaSelect">
-          <option value="">Todas</option>
+          <option value=""style="color: black;">Todas</option>
           {% for categoria in categorias %}
-            <option value="{{ categoria }}" {% if categoria == filtros.categoria %}selected{% endif %}>
+            <option value="{{ categoria }}" {% if categoria == filtros.categoria %}selected{% endif %} style="color: black;">
               {{ categoria|default:"Sin categoría" }}
             </option>
           {% endfor %}
@@ -44,9 +45,9 @@
       <label>
         <span>Marca</span>
         <select name="marca">
-          <option value="">Todas</option>
+          <option value=""style="color: black;">Todas</option>
           {% for marca in marcas %}
-            <option value="{{ marca }}" {% if marca == filtros.marca %}selected{% endif %}>
+            <option value="{{ marca }}" {% if marca == filtros.marca %}selected{% endif %} style="color: black;">
               {{ marca }}
             </option>
           {% endfor %}
@@ -55,9 +56,9 @@
       <label>
         <span>Calidad</span>
         <select name="calidad">
-          <option value="">Todas</option>
+          <option value="" style="color: black;">Todas</option>
           {% for calidad in calidades %}
-            <option value="{{ calidad }}" {% if calidad == filtros.calidad %}selected{% endif %}>
+            <option value="{{ calidad }}" {% if calidad == filtros.calidad %}selected{% endif %} style="color: black;">
               {{ calidad }}
             </option>
           {% endfor %}
@@ -78,10 +79,10 @@
       <label>
         <span>Ordenar por</span>
         <select name="orden">
-          <option value="recientes" {% if filtros.orden == "recientes" %}selected{% endif %}>Más recientes</option>
-          <option value="precio_asc" {% if filtros.orden == "precio_asc" %}selected{% endif %}>Precio menor</option>
-          <option value="precio_desc" {% if filtros.orden == "precio_desc" %}selected{% endif %}>Precio mayor</option>
-          <option value="stock" {% if filtros.orden == "stock" %}selected{% endif %}>Stock disponible</option>
+          <option value="recientes" {% if filtros.orden == "recientes" %}selected{% endif %} style="color: black;">Más recientes</option>
+          <option value="precio_asc" {% if filtros.orden == "precio_asc" %}selected{% endif %} style="color: black;">Precio menor</option>
+          <option value="precio_desc" {% if filtros.orden == "precio_desc" %}selected{% endif %} style="color: black;">Precio mayor</option>
+          <option value="stock" {% if filtros.orden == "stock" %}selected{% endif %} style="color: black;">Stock disponible</option>
         </select>
       </label>
     </div>
@@ -97,13 +98,20 @@
 
   <div class="grid">
     {% for producto in productos %}
-      <article class="card product" data-cat="{{ producto.categoria|default:''|slugify }}" data-marca="{{ producto.marca|default:''|slugify }}">
-        <div class="product__thumb">
+      <article class="card product"
+               data-cat="{{ producto.categoria|default:''|slugify }}"
+               data-marca="{{ producto.marca|default:''|slugify }}"
+               data-product-id="{{ producto.id }}">
+        <a class="product__thumb"
+           href="{{ producto.imagen_url }}"
+           target="_blank"
+           rel="noopener noreferrer"
+           title="Ver imagen de {{ producto.nombre }}">
           <img src="{{ producto.imagen_url }}" alt="{{ producto.nombre }}">
           {% if producto.is_new %}
             <span class="pill pill--accent">Nuevo</span>
           {% endif %}
-        </div>
+        </a>
         <div class="p-content">
           <h3>{{ producto.nombre }}</h3>
           <p class="muted">

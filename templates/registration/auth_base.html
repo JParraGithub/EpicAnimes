@@ -1,5 +1,6 @@
 {% load static %}
 <!DOCTYPE html>
+<!-- Sirve como base visual para todas las pantallas de autenticación. -->
 <html lang="es">
 <head>
   <meta charset="UTF-8">
@@ -10,8 +11,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
-  <link rel="stylesheet" href="{% static 'css/index.css' %}?v=4">
-  <link rel="stylesheet" href="{% static 'css/auth.css' %}?v=2">
+  <link rel="stylesheet" href="{% static 'css/base/index.css' %}?v=4">
+  <link rel="stylesheet" href="{% static 'css/base/auth.css' %}?v=2">
   {% block extra_head %}{% endblock %}
 </head>
 <body class="auth-body">
@@ -37,8 +38,8 @@
     <p>&copy; <span id="year"></span> EpicAnimes — Comunidad y e-commerce otaku.</p>
   </footer>
 
-  <script src="{% static 'js/stars-bg.js' %}" defer></script>
-  <script src="{% static 'js/page-shared.js' %}" defer></script>
+  <script src="{% static 'js/site/stars-bg.js' %}" defer></script>
+  <script src="{% static 'js/site/page-shared.js' %}" defer></script>
   {% block extra_js %}{% endblock %}
 </body>
 </html>

@@ -1,0 +1,150 @@
+/* Maqueta el apartado de términos y condiciones. */
+:root{
+  --terms-bg:#050815;
+  --terms-panel:rgba(7,11,26,0.85);
+  --terms-border:rgba(255,255,255,0.1);
+  --terms-text:#e7ecf5;
+  --terms-muted:#9fb0c9;
+  --terms-accent:#e94560;
+  --terms-secondary:#62b3ff;
+}
+
+body{
+  margin:0;
+  background:radial-gradient(1200px 500px at 10% 0%, #1a2757 0%, var(--terms-bg) 52%);
+  color:var(--terms-text);
+  font-family:"Poppins","Noto Sans JP",system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+  overflow-x:hidden;
+}
+
+canvas{
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  z-index:-1;
+}
+
+.page-shell{
+  width:min(1000px,calc(100% - 40px));
+  margin:120px auto 70px;
+  display:flex;
+  flex-direction:column;
+  gap:28px;
+}
+
+.glass{
+  border-radius:28px;
+  border:1px solid var(--terms-border);
+  background:linear-gradient(180deg,rgba(255,255,255,0.1),rgba(255,255,255,0.02));
+  backdrop-filter:blur(14px);
+  box-shadow:0 30px 60px rgba(0,0,0,0.45);
+}
+
+.terms-hero{
+  padding:48px;
+  display:flex;
+  flex-wrap:wrap;
+  gap:32px;
+  justify-content:space-between;
+}
+.terms-hero h1{
+  margin:10px 0 12px;
+  font-size:clamp(2.2rem,4vw,3.2rem);
+}
+.terms-hero p{
+  color:var(--terms-muted);
+  max-width:560px;
+}
+.terms-hero .pill{
+  display:inline-flex;
+  gap:8px;
+  align-items:center;
+  padding:6px 14px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,0.2);
+  background:rgba(233,69,96,0.15);
+  color:#ffd9e3;
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  font-size:.85rem;
+}
+
+.terms-highlight{
+  border-radius:22px;
+  border:1px dashed rgba(255,255,255,0.25);
+  background:rgba(5,9,22,0.55);
+  padding:24px 28px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  min-width:240px;
+  align-self:center;
+  margin-left:auto;
+  margin-right:auto;
+}
+.terms-highlight p{
+  margin:0;
+  font-weight:600;
+}
+.terms-highlight span{
+  color:var(--terms-muted);
+  display:flex;
+  gap:8px;
+  align-items:center;
+}
+.terms-highlight i{
+  color:var(--terms-secondary);
+}
+
+.terms-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+  gap:20px;
+}
+.term-card{
+  padding:28px;
+}
+.term-card h2{
+  margin:0 0 12px;
+  color:var(--terms-secondary);
+  font-size:1.1rem;
+}
+.term-card p{
+  margin:0;
+  color:var(--terms-muted);
+  line-height:1.5;
+}
+
+.terms-help{
+  padding:30px;
+  text-align:center;
+}
+.terms-help h2{
+  margin-top:0;
+}
+.terms-help a{
+  color:var(--terms-secondary);
+  font-weight:600;
+}
+
+.page-footer{
+  width:min(1000px,calc(100% - 40px));
+  margin:0 auto 60px;
+}
+
+@media (max-width:640px){
+  .page-shell{
+    width:calc(100% - 24px);
+    margin:110px auto 60px;
+  }
+  .terms-hero{
+    padding:32px 24px;
+  }
+  .terms-hero h1{
+    font-size:2rem;
+  }
+  .terms-highlight{
+    width:100%;
+  }
+}

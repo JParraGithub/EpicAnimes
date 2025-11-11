@@ -1,0 +1,33 @@
+  <div class="hero__card glass" aria-live="polite">
+    <div class="card__header">
+      <span class="tag">Destacados</span>
+      <span class="title">Últimos ingresos</span>
+    </div>
+    <div class="card__grid">
+      {% for producto in productos|slice:":3" %}
+        <a class="item" href="#catalogo" data-nav-target="catalogo" data-product-focus="{{ producto.id }}" title="Ver {{ producto.nombre }} en el cat?logo">
+          <img src="{{ producto.imagen_url }}" alt="{{ producto.nombre }}">
+          <div class="item__meta">
+            <strong>{{ producto.nombre|truncatechars:22 }}</strong>
+            <small>
+              {{ producto.categoria|default:"Sin categoría" }} ·
+              ${{ producto.precio|floatformat:0 }}
+            </small>
+          </a>
+        </div>
+      {% empty %}
+        <div class="item item--empty">
+          <p>Añade tus primeros productos desde el dashboard para poblar esta vitrina.</p>
+        </div>
+      {% endfor %}
+    </div>
+    <div class="card__footer">
+      <a class="btn btn--primary small" href="#catalogo" data-nav-target="catalogo">
+        <i class="fa fa-bolt"></i> Ver catálogo
+      </a>
+      <a class="btn btn--ghost small" href="{% url 'sobre_nosotros' %}">
+        <i class="fa fa-circle-info"></i> Conocer más
+      </a>
+    </div>
+  </div>
+</section>

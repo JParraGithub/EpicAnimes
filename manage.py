@@ -1,11 +1,11 @@
 #!/usr/bin/env python
-"""Django's command-line utility for administrative tasks."""
+"""Expone la utilidad de administración de Django para EpicAnimes."""
 import os
 import sys
 
 
 def main():
-    """Run administrative tasks."""
+    """Inicializa la utilidad administrativa de Django y ejecuta el comando recibido."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'EpicAnimes.settings')
     try:
         from django.core.management import execute_from_command_line

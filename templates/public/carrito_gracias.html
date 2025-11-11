@@ -1,0 +1,124 @@
+{% load static %}
+<!DOCTYPE html>
+<!-- Confirma al cliente que la compra fue completada. -->
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>EpicAnimes | Gracias por tu compra</title>
+  <meta name="csrf-token" content="{{ csrf_token }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+  <link rel="stylesheet" href="{% static 'css/base/index.css' %}?v=4">
+  <link rel="stylesheet" href="{% static 'css/pages/carrito_gracias.css' %}?v=1">
+  <link rel="stylesheet" href="{% static 'css/base/chatbot.css' %}?v=2">
+</head>
+<body class="thanks-body">
+  <canvas id="stars" aria-hidden="true"></canvas>
+
+  {% include 'includes/navbar.html' with nav_page='carrito' %}
+
+  <main class="thanks-shell">
+    <section class="glass thanks-hero">
+      <div class="thanks-status">
+        <span class="thanks-icon">
+          <i class="fa fa-circle-check"></i>
+        </span>
+        <p class="label-pill">Pedido confirmado</p>
+        <h1>Compra registrada</h1>
+        <p class="lead">
+          Gracias por confiar en EpicAnimes. Notificamos al vendedor y comenzamos a preparar el despacho.
+        </p>
+        {% if total %}
+          <p class="thanks-total">Total pagado <span>$ {{ total }}</span></p>
+        {% endif %}
+        <div class="thanks-actions">
+          <a class="btn btn--primary" href="{% url 'index' %}#catalogo">
+            <i class="fa fa-store"></i> Seguir explorando
+          </a>
+          <a class="btn btn--ghost" href="{% url 'carrito' %}">
+            <i class="fa fa-clock-rotate-left"></i> Ver historial
+          </a>
+        </div>
+        <p class="hint">
+          Recibirás un correo con el detalle.
+        </p>
+      </div>
+    </section>
+
+    {% if checkout_info %}
+      <section class="glass thanks-summary">
+        <div class="summary-head">
+          <h3>Resumen de envío</h3>
+          <span class="badge">Datos protegidos</span>
+        </div>
+        <dl>
+          {% if checkout_info.nombre %}
+            <dt>Nombre</dt><dd>{{ checkout_info.nombre }}</dd>
+          {% endif %}
+          {% if checkout_info.email %}
+            <dt>Correo</dt><dd>{{ checkout_info.email }}</dd>
+          {% endif %}
+          {% if checkout_info.telefono %}
+            <dt>Teléfono</dt><dd>{{ checkout_info.telefono }}</dd>
+          {% endif %}
+          {% if checkout_info.direccion %}
+            <dt>Dirección</dt><dd>{{ checkout_info.direccion }}</dd>
+          {% endif %}
+          {% if checkout_info.ciudad %}
+            <dt>Ciudad</dt><dd>{{ checkout_info.ciudad }}</dd>
+          {% endif %}
+          {% if checkout_info.notas %}
+            <dt>Notas</dt><dd>{{ checkout_info.notas }}</dd>
+          {% endif %}
+        </dl>
+      </section>
+    {% endif %}
+
+
+    <section class="glass thanks-next">
+      <div>
+        <p class="pill pill--accent"><i class="fa fa-road"></i> ¿Qué sigue?</p>
+        <h2>Timeline de tu pedido</h2>
+        <p class="muted">Te enviaremos una notificación en cada hito.</p>
+      </div>
+      <div class="timeline">
+        <article>
+          <span>1. Confirmación</span>
+          <p>Validamos el pago y notificamos al vendedor con tus datos.</p>
+        </article>
+        <article>
+          <span>2. Preparación</span>
+          <p>El vendedor embala tu compra y actualiza el número de seguimiento.</p>
+        </article>
+        <article>
+          <span>3. Envío</span>
+          <p>Recibirás un correo con el tracking para monitorear la entrega.</p>
+        </article>
+        <article>
+          <span>4. Entrega</span>
+          <p>Confirma la recepción y califica la experiencia para desbloquear beneficios.</p>
+        </article>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer glass thanks-footer">
+    <p>&copy; <span id="currentYear"></span> EpicAnimes - Ecommerce otaku con pagos seguros.</p>
+    <nav class="footer__links" aria-label="Enlaces legales">
+      <a href="{% url 'terminos' %}">Términos</a>
+      <a href="{% url 'contacto' %}#postulacion">Soporte</a>
+      <a href="{% url 'sobre_nosotros' %}">Nosotros</a>
+    </nav>
+  </footer>
+
+  {% include 'includes/chatbot_popup.html' %}
+
+  <script src="{% static 'js/site/stars-bg.js' %}" defer></script>
+  <script defer src="{% static 'js/site/chatbot.js' %}?v=2"></script>
+  <script>
+    try { document.getElementById('currentYear').textContent = new Date().getFullYear(); } catch (e) {}
+  </script>
+</body>
+</html>

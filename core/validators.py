@@ -1,12 +1,11 @@
+"""Define validadores personalizados utilizados por la plataforma."""
+
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext as _, ngettext
 
 
 class PasswordComplexityValidator:
-    """
-    Validador de complejidad para contraseñas.
-    Requiere que la contraseña incluya diferentes tipos de caracteres.
-    """
+    """Exige combinaciones mínimas de caracteres para endurecer contraseñas."""
 
     def __init__(self, min_uppercase=1, min_lowercase=1, min_digits=1, min_symbols=1):
         self.min_uppercase = int(min_uppercase)
@@ -15,9 +14,11 @@ class PasswordComplexityValidator:
         self.min_symbols = int(min_symbols)
 
     def _count_if(self, password, predicate):
+        """Cuenta caracteres de la contraseña que cumplen la condición indicada."""
         return sum(1 for ch in password if predicate(ch))
 
     def validate(self, password, user=None):
+        """Evalúa la contraseña y agrega mensajes cuando falta algún requisito."""
         errors = []
 
         if self.min_uppercase and self._count_if(password, str.isupper) < self.min_uppercase:
@@ -64,6 +65,7 @@ class PasswordComplexityValidator:
             raise ValidationError(errors)
 
     def get_help_text(self):
+        """Devuelve un resumen legible de los requisitos configurados."""
         fragments = []
 
         def _fragment(singular, plural, amount):

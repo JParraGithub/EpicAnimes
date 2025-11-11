@@ -1,9 +1,14 @@
-﻿from django.conf import settings
+"""Define los modelos principales que describen el dominio de EpicAnimes."""
+
+from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
 
+
 class Vendedor(models.Model):
+    """Representa a un vendedor asociado a un usuario interno."""
+
     usuario = models.OneToOneField(User, on_delete=models.CASCADE)
     telefono = models.CharField(max_length=20, blank=True, null=True)
     direccion = models.CharField(max_length=120, blank=True, null=True)
@@ -12,7 +17,10 @@ class Vendedor(models.Model):
     def __str__(self):
         return f"{self.usuario.username}"
 
+
 class Producto(models.Model):
+    """Contiene los datos descriptivos de un artículo publicado."""
+
     vendedor = models.ForeignKey(Vendedor, on_delete=models.CASCADE, related_name='productos', null=True, blank=True)
     nombre = models.CharField(max_length=80)
     descripcion = models.TextField(blank=True)
@@ -30,7 +38,10 @@ class Producto(models.Model):
     def __str__(self):
         return f"{self.nombre} - {self.marca}"
 
+
 class Venta(models.Model):
+    """Registra las operaciones de venta asociadas a un vendedor."""
+
     vendedor = models.ForeignKey(Vendedor, on_delete=models.CASCADE)
     producto = models.ForeignKey(Producto, on_delete=models.CASCADE)
     cantidad = models.IntegerField()
@@ -38,13 +49,17 @@ class Venta(models.Model):
     fecha_venta = models.DateField(auto_now_add=True)
 
     def save(self, *args, **kwargs):
+        """Calcula el total a partir de la cantidad y del precio del producto."""
         self.total = self.cantidad * self.producto.precio
-        super(Venta, self).save(*args, **kwargs)
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"{self.vendedor} - {self.producto} ({self.cantidad})"
 
+
 class Compra(models.Model):
+    """Almacena la información de compras realizadas por clientes."""
+
     cliente = models.CharField(max_length=60)
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -69,8 +84,10 @@ class Compra(models.Model):
         nombre = self.cliente or (self.usuario.username if self.usuario else "Cliente")
         return f"{nombre} - {self.producto}"
 
-# Datos guardados para autofill en checkout
+
 class PerfilCliente(models.Model):
+    """Guarda los datos del cliente para agilizar futuras compras."""
+
     user = models.OneToOneField(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="perfil_cliente")
     nombre = models.CharField(max_length=120, blank=True)
     email = models.EmailField(blank=True)
@@ -84,8 +101,10 @@ class PerfilCliente(models.Model):
     def __str__(self):
         return f"Perfil de {self.user.username}"
 
-# MÃ©tricas globales (para dashboards)
+
 class DashboardMetricas(models.Model):
+    """Consolida totales diarios utilizados en los tableros."""
+
     fecha = models.DateField(auto_now_add=True)
     total_ventas = models.DecimalField(max_digits=12, decimal_places=2, default=0)
     total_productos = models.IntegerField(default=0)
@@ -93,9 +112,12 @@ class DashboardMetricas(models.Model):
     total_clientes = models.IntegerField(default=0)
 
     def __str__(self):
-        return f"MÃ©tricas {self.fecha}"
+        return f"Métricas {self.fecha}"
+
 
 class PostulacionVendedor(models.Model):
+    """Describe la postulación enviada por un potencial vendedor."""
+
     nombre = models.CharField(max_length=120)
     email = models.EmailField()
     telefono = models.CharField(max_length=30, blank=True)
@@ -114,8 +136,12 @@ class PostulacionVendedor(models.Model):
 
 
 class NewsletterSubscriber(models.Model):
+    """Mantiene el registro de correos suscritos al newsletter."""
+
     email = models.EmailField(unique=True)
     fecha_suscripcion = models.DateTimeField(auto_now_add=True)
+    segmento = models.CharField(max_length=60, blank=True)
+    ruta_origen = models.CharField(max_length=255, blank=True)
 
     class Meta:
         ordering = ("-fecha_suscripcion",)

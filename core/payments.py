@@ -1,3 +1,5 @@
+"""Implementa utilidades de integración con PayPal y conversión de moneda."""
+
 import logging
 import os
 from dataclasses import dataclass
@@ -36,16 +38,14 @@ class PayPalError(Exception):
 
 
 def get_paypal_currencies() -> Tuple[str, str]:
+    """Obtiene las monedas configuradas para la tienda y las órdenes de PayPal."""
     tienda = getattr(settings, "PAYPAL_CURRENCY", "CLP").strip().upper() or "CLP"
     orden = getattr(settings, "PAYPAL_ORDER_CURRENCY", tienda).strip().upper() or tienda
     return tienda, orden
 
 
 def get_paypal_conversion_rate(force_refresh: bool = False) -> Tuple[Decimal, bool]:
-    """
-    Retorna la tasa configurada (moneda tienda por moneda de cobro) y un flag indicando
-    si se usó el valor de respaldo manual.
-    """
+    """Obtiene la tasa de conversión y señala si se usó el valor de respaldo."""
     tienda, orden = get_paypal_currencies()
     if tienda == orden:
         return Decimal("1"), False
@@ -91,6 +91,7 @@ def get_paypal_conversion_rate(force_refresh: bool = False) -> Tuple[Decimal, bo
 
 
 def paypal_conversion_summary(total: Decimal) -> dict:
+    """Construye un resumen de conversión para mostrar al usuario."""
     moneda_tienda, moneda_orden = get_paypal_currencies()
     conversion_rate, used_fallback = get_paypal_conversion_rate()
     uses_conversion = (moneda_orden != moneda_tienda) or (conversion_rate != Decimal("1"))
@@ -159,6 +160,8 @@ def normalize_paypal_totals(
 
 @dataclass
 class PayPalCaptureResult:
+    """Agrupa el resultado obtenido al capturar una orden de PayPal."""
+
     order_id: str
     status: str
     capture_id: Optional[str]
@@ -167,6 +170,7 @@ class PayPalCaptureResult:
 
 
 def _ensure_paypal_credentials() -> Tuple[str, str]:
+    """Obtiene las credenciales desde settings o desde el archivo .env."""
     client_id = (getattr(settings, "PAYPAL_CLIENT_ID", "") or "").strip()
     client_secret = (getattr(settings, "PAYPAL_CLIENT_SECRET", "") or "").strip()
     if client_id and client_secret:
@@ -187,6 +191,7 @@ def _ensure_paypal_credentials() -> Tuple[str, str]:
 
 
 def _paypal_api_base() -> str:
+    """Resuelve la URL base del API según el modo configurado."""
     base = getattr(settings, "PAYPAL_API_BASE", "").strip()
     if base:
         return base
@@ -197,6 +202,7 @@ def _paypal_api_base() -> str:
 
 
 def paypal_is_configured() -> Tuple[bool, Optional[str]]:
+    """Confirma si existen credenciales PayPal válidas en la configuración."""
     client_id, client_secret = _ensure_paypal_credentials()
     if not client_id or not client_secret:
         return (
@@ -226,6 +232,7 @@ def paypal_format_amount(amount: Decimal, currency: Optional[str]) -> str:
 
 
 def _paypal_access_token() -> str:
+    """Solicita y devuelve un token OAuth válido para operar con PayPal."""
     ok, error = paypal_is_configured()
     if not ok:
         raise PayPalError(error or "Configuración PayPal incompleta.")
@@ -324,6 +331,7 @@ def paypal_capture_order(
     expected_amount: Optional[Decimal] = None,
     expected_currency: Optional[str] = None,
 ) -> PayPalCaptureResult:
+    """Captura una orden PayPal y valida montos y divisas esperadas."""
     if not order_id:
         raise PayPalError("Identificador de orden PayPal inválido.")
 
@@ -347,7 +355,7 @@ def paypal_capture_order(
         data = response.json()
     else:
         data = response.json() if response.headers.get("Content-Type", "").startswith("application/json") else {}
-        # Orden ya capturada previamente
+        # Gestiona el caso de órdenes que ya fueron capturadas previamente.
         if response.status_code == 422 and data.get("name") == "ORDER_ALREADY_CAPTURED":
             logger.info("Orden PayPal %s ya estaba capturada, consultando estado.", order_id)
             data = _paypal_fetch_order(order_id, token, base)
@@ -420,6 +428,7 @@ def paypal_capture_order(
 
 
 def _paypal_fetch_order(order_id: str, token: str, base: str) -> dict:
+    """Consulta los detalles de una orden cuando la API lo requiere."""
     url = f"{base}/v2/checkout/orders/{order_id}"
     try:
         response = requests.get(
