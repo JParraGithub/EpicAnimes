@@ -240,6 +240,7 @@ def newsletter_suscribir(request):
 @require_http_methods(["POST"])
 def api_chatbot_ask(request):
     """Responde preguntas enviadas al chatbot con mensajes JSON."""
+    rol_usuario = obtener_rol_usuario(request.user)
     try:
         payload = json.loads(request.body.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError, AttributeError, TypeError):
@@ -250,7 +251,7 @@ def api_chatbot_ask(request):
         return JsonResponse({"ok": False, "error": "Por favor escribe una pregunta para que pueda ayudarte."}, status=400)
 
     try:
-        result = chatbot_responder(question)
+        result = chatbot_responder(question, rol_usuario)
     except RuntimeError as exc:
         logger.warning("Chatbot temporalmente inhabilitado: %s", exc)
         return JsonResponse({"ok": False, "error": str(exc)}, status=503)
@@ -260,7 +261,9 @@ def api_chatbot_ask(request):
 
     answer = result.get("answer") or "No tengo una respuesta disponible en este momento."
     confidence = float(result.get("confidence", 0.0))
-    return JsonResponse({"ok": True, "answer": answer, "confidence": confidence})
+    return JsonResponse(
+        {"ok": True, "answer": answer, "confidence": confidence, "user_role": rol_usuario}
+    )
 
 class CarritoError(Exception):
 

@@ -2,7 +2,15 @@
 <div id="chatbot-bubble" class="chatbot-bubble" aria-label="Abrir asistente virtual">
   <i class="fa fa-comments"></i>
 </div>
-<div id="chatbot-panel" class="chatbot-panel" role="dialog" aria-modal="true" aria-labelledby="chatbotTitle" hidden>
+<div
+  id="chatbot-panel"
+  class="chatbot-panel"
+  role="dialog"
+  aria-modal="true"
+  aria-labelledby="chatbotTitle"
+  hidden
+  data-chatbot-role="{{ rol_usuario|default:'anonimo' }}"
+>
   <header class="chatbot-header">
     <div class="chatbot-header__title">
       <span class="chatbot-logo" aria-hidden="true">
@@ -31,14 +39,25 @@
     </div>
   </header>
   <section id="chatbot-messages" class="chatbot-messages">
-    <div class="chatbot-message bot">
+    <div class="chatbot-message bot" data-initial="true">
       ¡Hola! Soy EpicChat. Pregúntame sobre envíos, pagos, preventas u otra duda y te responderé al instante.
     </div>
   </section>
   <section class="chatbot-suggestions" aria-label="Preguntas sugeridas">
-    <button type="button" class="chatbot-suggestion">¿Cuál es el horario de atención?</button>
-    <button type="button" class="chatbot-suggestion">¿Cuánto tarda el envío?</button>
-    <button type="button" class="chatbot-suggestion">¿Cómo doy seguimiento a mi pedido?</button>
+    <p id="chatbot-suggestions-title" class="chatbot-suggestions__title">
+      ¿No sabes qué preguntar? Prueba con estas ideas:
+    </p>
+    <div class="chatbot-suggestions__list">
+      <button type="button" class="chatbot-suggestion" data-suggestion-index="0">
+        ¿Cuál es el horario de atención?
+      </button>
+      <button type="button" class="chatbot-suggestion" data-suggestion-index="1">
+        ¿Cuánto tarda el envío?
+      </button>
+      <button type="button" class="chatbot-suggestion" data-suggestion-index="2">
+        ¿Cómo doy seguimiento a mi pedido?
+      </button>
+    </div>
   </section>
   <form id="chatbot-form" class="chatbot-form" autocomplete="off" data-loader-skip="true">
     <input type="text" id="chatbot-input" name="message" class="form-control" placeholder="Escribe tu pregunta..." required>

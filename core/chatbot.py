@@ -5,7 +5,7 @@ import re
 import unicodedata
 from decimal import Decimal
 from pathlib import Path
-from typing import List, Tuple
+from typing import Iterable, List, Tuple
 
 import numpy as np
 from django.apps import apps
@@ -109,16 +109,214 @@ _RECOMMEND_TERMS = {
     "sugerir",
     "sugerirme",
 }
-DEFAULT_UNKNOWN_RESPONSE = (
-    "Aun no tengo informacion para ese tema. Preguntame sobre envios, pagos, pedidos o "
-    "nuestros productos y te respondo enseguida."
-)
+_GREETING_VARIANTS = [
+    "¡Hola! ¿Qué tal?",
+    "¡Hola! Bienvenido a EpicAnimes.",
+    "¡Buenas! ¿En qué puedo ayudarte hoy?",
+]
+_SMALL_TALK_PHRASES = [
+    "que tal",
+    "como estas",
+    "como va",
+    "todo bien",
+]
+_THANKS_KEYWORDS = {"gracias"}
+_GOODBYE_KEYWORDS = {"chau", "chao", "adios", "nos vemos", "hasta luego"}
+_OFFENSIVE_KEYWORDS = {"idiota", "tonto", "estupido", "imbecil", "mierda", "maldito"}
+_HELP_KEYWORDS = {
+    "ayuda",
+    "ayudame",
+    "ayudar",
+    "orientacion",
+    "orientarme",
+    "orientame",
+    "orienta",
+    "orientar",
+    "guiame",
+    "guia",
+    "guiar",
+    "guiarme",
+    "sugerencias",
+    "sugerencia",
+    "ideas",
+    "idea",
+}
+DEFAULT_UNKNOWN_RESPONSE = "No tengo esa información exacta, pero puedo derivarte con soporte si lo deseas."
+
+
+def _pick_variant(options, seed: str = "") -> str:
+    """Devuelve una variante determinista según la semilla entregada."""
+    if not options:
+        return ""
+    idx = abs(hash(seed or "")) % len(options)
+    return options[idx]
+
+
+def _compose_response(*segments: str) -> str:
+    """Ensambla una respuesta corta (máximo 3 líneas) limpiando espacios."""
+    lines: List[str] = []
+    for segment in segments:
+        if not segment:
+            continue
+        for piece in str(segment).splitlines():
+            cleaned = piece.strip()
+            if not cleaned:
+                continue
+            lines.append(cleaned)
+            if len(lines) >= 3:
+                return "\n".join(lines[:3])
+    if not lines:
+        return DEFAULT_UNKNOWN_RESPONSE
+    return "\n".join(lines[:3])
+
+
+_ROLE_GREETING_SEGMENTS = {
+    "administrador": (
+        "Veo que eres administrador; puedo ayudarte a navegar informes y tareas operativas.",
+        "Te acompaño con dashboards, usuarios, vendedores y configuraciones globales.",
+        "¿En qué proceso necesitas apoyo hoy?",
+    ),
+    "vendedor": (
+        "Estás en el modo vendedor certificado de EpicAnimes.",
+        "Gestionemos productos, stock, alertas críticas y métricas del dashboard.",
+        "Recuerda que avisamos cuando tu stock baja de 5 unidades.",
+    ),
+    "comprador": (
+        "Veo tu sesión como comprador registrado.",
+        "Te ayudo con compras, envíos, devoluciones y métodos de pago.",
+        "Si buscas un pedido revisa Mis compras o el correo de confirmación.",
+    ),
+    "anonimo": (
+        "Bienvenido a EpicAnimes, la tienda online de coleccionables de anime.",
+        "Puedes registrarte o iniciar sesión desde el menú principal para guardar tus pedidos.",
+        "Pregúntame lo que necesites sobre catálogo o registro.",
+    ),
+}
+
+_ROLE_HELP_SEGMENTS = {
+
+  "invitado": [
+    {
+      "pregunta": "¿Qué es EpicAnimes?",
+      "respuesta": "Es una tienda online especializada en productos de anime, figuras, poleras, posters y mucho más."
+    },
+    {
+      "pregunta": "¿Necesito una cuenta para comprar?",
+      "respuesta": "Sí, debes registrarte o iniciar sesión para poder finalizar tus compras y recibir seguimiento del pedido."
+    },
+    {
+      "pregunta": "¿Cuál es el horario de atención?",
+      "respuesta": "Atendemos todos los días de 09:00 a 21:00 hrs. Fuera de horario te responderemos al siguiente día hábil."
+    }
+  ],
+
+  "comprador": [
+    {
+      "pregunta": "¿Cómo hago seguimiento a mi pedido?",
+      "respuesta": "Revisa el correo de confirmación o entra a 'Mis compras' en tu panel para ver el número de seguimiento."
+    },
+    {
+      "pregunta": "¿Cuánto tarda el envío?",
+      "respuesta": "En Santiago entre 24 y 48 horas hábiles; en regiones, de 3 a 5 días hábiles."
+    },
+    {
+      "pregunta": "¿Qué hago si mi producto llega dañado?",
+      "respuesta": "Escríbenos dentro de 5 días con fotos y el número de orden para coordinar cambio o reembolso."
+    }
+  ],
+
+  "vendedor": [
+    {
+      "pregunta": "¿Cómo agrego un producto?",
+      "respuesta": "En tu Dashboard Vendedor, entra a 'Mis productos' y presiona 'Agregar nuevo'."
+    },
+    {
+      "pregunta": "¿Qué significa stock crítico?",
+      "respuesta": "Es una alerta automática cuando el inventario baja de 5 unidades para que repongas stock."
+    },
+    {
+      "pregunta": "¿Dónde veo mis ventas?",
+      "respuesta": "En tu Dashboard puedes revisar tus ventas totales, productos más vendidos y métricas diarias."
+    }
+  ],
+  
+  "administrador": [
+    {
+      "pregunta": "¿Dónde veo las métricas globales?",
+      "respuesta": "Desde el Dashboard Administrador, donde verás ventas, usuarios activos y desempeño por vendedor."
+    },
+    {
+      "pregunta": "¿Cómo gestiono reportes del sistema?",
+      "respuesta": "En la sección 'Reportes' puedes revisar errores o reclamos y marcarlos como resueltos."
+    },
+    {
+      "pregunta": "¿Puedo enviar notificaciones a todos los vendedores?",
+      "respuesta": "Sí, desde el panel de administración puedes enviar avisos o correos masivos a todos los vendedores activos."
+    }
+  ]
+}
+
+
+_FAQ_RULES = [
+    {
+        "phrases": ["recomiendame algo", "recomiendame"],
+        "response": (
+            "Depende de tus gustos: tenemos figuras, poleras, posters y accesorios.",
+            "Dime tu anime favorito y te sugiero algo puntual.",
+        ),
+    },
+    {
+        "any": {"pago"},
+        "response": (
+            "Aceptamos tarjeta, transferencia bancaria y MercadoPago.",
+            "Elige el medio preferido durante el checkout.",
+        ),
+    },
+]
+
+def _match_rule(question: str, tokens: List[str], user_role: str | None, rules: List[dict]) -> str | None:
+    """Evalúa un conjunto de reglas y retorna la respuesta correspondiente."""
+    if not question:
+        return None
+    normalized_question = _normalize_text(question)
+    token_set = _normalize_tokens(tokens)
+    role = (user_role or "comprador").lower()
+    for rule in rules:
+        roles = rule.get("roles")
+        if roles and role not in roles:
+            continue
+        all_tokens = rule.get("all")
+        if all_tokens:
+            if not _normalize_tokens(all_tokens).issubset(token_set):
+                continue
+        any_tokens = rule.get("any")
+        if any_tokens:
+            if not (token_set & _normalize_tokens(any_tokens)):
+                continue
+        phrases = rule.get("phrases")
+        if phrases:
+            if not any(_normalize_text(phrase) in normalized_question for phrase in phrases):
+                continue
+        response_segments = rule.get("response") or ()
+        if response_segments:
+            return _compose_response(*response_segments)
+    return None
 
 
 def _strip_accents(text: str) -> str:
     """Elimina tildes y caracteres combinados para estandarizar el texto."""
     normalized = unicodedata.normalize("NFKD", text)
     return "".join(ch for ch in normalized if not unicodedata.combining(ch))
+
+
+def _normalize_text(text: str) -> str:
+    """Normaliza texto para coincidencias: minúsculas sin acentos ni espacios extras."""
+    cleaned = _strip_accents(text or "").lower()
+    return re.sub(r"\s+", " ", cleaned).strip()
+
+
+def _normalize_tokens(tokens: Iterable[str]) -> set[str]:
+    return { _normalize_text(token) for token in tokens if token }
 
 
 def _tokenize(text: str) -> List[str]:
@@ -129,33 +327,65 @@ def _tokenize(text: str) -> List[str]:
     return _TOKEN_PATTERN.findall(lowered)
 
 
-def _special_response(question: str) -> str | None:
-    """Provee respuestas rápidas para saludos y entradas breves."""
-    normalized = _strip_accents(question.lower()).strip()
-    cleaned = re.sub(r"[^a-z0-9\s]", "", normalized)
-    tokens = cleaned.split()
+def _role_greeting(role: str | None, *, seed: str = "") -> str:
+    """Devuelve un saludo contextualizado según el rol del usuario."""
+    normalized_role = role or "comprador"
+    segments = _ROLE_GREETING_SEGMENTS.get(normalized_role, _ROLE_GREETING_SEGMENTS["comprador"])
+    variant = _pick_variant(_GREETING_VARIANTS, seed or normalized_role)
+    return _compose_response(variant, *segments)
+
+
+def _role_help_message(role: str | None) -> str:
+    """Entrega sugerencias rápidas para orientar al usuario según su rol."""
+    normalized_role = role or "comprador"
+    segments = _ROLE_HELP_SEGMENTS.get(normalized_role, _ROLE_HELP_SEGMENTS["comprador"])
+    return _compose_response(*segments)
+
+
+def _special_response(question: str, *, user_role: str | None = None) -> str | None:
+    """Provee respuestas rápidas para saludos, despedidas y entradas breves."""
+    normalized = _strip_accents((question or "").lower()).strip()
+    cleaned = re.sub(r"[^a-z0-9\s]", " ", normalized)
+    tokens = [tok for tok in cleaned.split() if tok]
     if not tokens:
-        return (
-            "Creo que solo enviaste algunos signos. Cuéntame tu pregunta sobre envíos, pagos o pedidos "
-            "y con gusto te ayudo."
+        return _compose_response(
+            "Parece que solo enviaste signos o espacios.",
+            "Cuéntame tu pregunta sobre EpicAnimes y con gusto respondo.",
         )
-    if any(token in {"gracias", "muchas gracias", "gracias!", "gracias."} for token in tokens):
-        return "¡Con gusto! Si tienes otra duda, solo escríbela y te acompaño."
+    token_set = set(tokens)
+    if token_set & _OFFENSIVE_KEYWORDS:
+        return _compose_response(
+            "Prefiero mantener una conversación respetuosa.",
+            "¿Deseas que te ayude con algo relacionado con EpicAnimes?",
+        )
+    if token_set & _THANKS_KEYWORDS:
+        return _compose_response("¡Gracias a ti!", "¿Hay algo más en lo que pueda ayudarte en EpicAnimes?")
+    if token_set & _HELP_KEYWORDS:
+        return _role_help_message(user_role)
+    if any(phrase in normalized for phrase in _GOODBYE_KEYWORDS):
+        return _compose_response(
+            "¡Hasta luego, que tengas un gran día!",
+            "Si necesitas algo más de EpicAnimes, aquí estaré.",
+        )
+    if any(phrase in normalized for phrase in _SMALL_TALK_PHRASES):
+        reply = _pick_variant(
+            [
+                "Todo bien por aquí, listo para ayudarte.",
+                "Muy bien, ¿y tú? Cuéntame en qué te apoyo.",
+                "Todo tranquilo en EpicAnimes; dime qué necesitas.",
+            ],
+            seed=question,
+        )
+        return _compose_response(reply, "¿En qué puedo ayudarte hoy?")
     for keyword in _GREETING_KEYWORDS:
         if cleaned.startswith(keyword) or f" {keyword} " in f" {cleaned} ":
-            return (
-                "¡Hola! Soy EpicChat y te puedo ayudar con envíos, pagos o pedidos. "
-                "¿Qué necesitas saber?"
-            )
-    short_noise = (
-        len(tokens) <= 2
-        and all(len(token) <= 2 for token in tokens)
-    )
+            return _role_greeting(user_role, seed=question)
+    short_noise = len(tokens) <= 2 and all(len(token) <= 2 for token in tokens)
     only_repeated = len(set("".join(tokens))) == 1 if tokens else False
     if short_noise or only_repeated:
-        return (
-            "Parece que escribiste solo algunos caracteres sueltos. Dime qué necesitas saber sobre productos, "
-            "envíos o pagos y te responderé enseguida."
+        return _compose_response(
+            "Parece que escribiste pocos caracteres.",
+            "Dime tu duda sobre productos, envíos o soporte y te respondo de inmediato.",
         )
     return None
 
@@ -209,27 +439,11 @@ def _recommendation_answer(productos: List) -> dict | None:
     candidatos.sort(key=_score, reverse=True)
     top = candidatos[0]
 
-    partes = [
-        f"Te puedo recomendar \"{top.nombre}\" de la categoria {top.categoria} por {_format_price(top.precio)}.",
-    ]
-    if top.existencias is not None:
-        partes.append(f"Tenemos {max(int(top.existencias), 0)} unidades listas para despacho.")
-    partes.append(f"Revisalo aqui: /producto/{top.id}/.")
-
-    descripcion = (top.descripcion or "").strip()
-    if descripcion:
-        if len(descripcion) > 200:
-            corte = descripcion[:200]
-            espacio = corte.rfind(" ")
-            descripcion = (corte[:espacio] if espacio > 120 else corte).rstrip() + "..."
-        partes.append(descripcion)
-
-    if len(candidatos) > 1:
-        alternativas = ", ".join(prod.nombre for prod in candidatos[1:3])
-        if alternativas:
-            partes.append(f"Tambien podrias revisar {alternativas}.")
-
-    respuesta = " ".join(part for part in partes if part).strip()
+    respuesta = _compose_response(
+        f'Te recomiendo "{top.nombre}" ({top.categoria}) por {_format_price(top.precio)}.',
+        f"Hay {max(int(top.existencias or 0), 0)} unidades listas para despacho.",
+        f"Revísalo aquí: /producto/{top.id}/.",
+    )
     return {"answer": respuesta, "confidence": 0.85}
 
 
@@ -287,19 +501,11 @@ def _product_answer(question: str, tokens: List[str]) -> dict | None:
 
     matches.sort(key=lambda item: (item["score"], item["producto"].existencias or 0), reverse=True)
     top = matches[0]["producto"]
-    respuesta_partes = [
-        f"Tenemos disponible \"{top.nombre}\" en la categoria {top.categoria} por {_format_price(top.precio)}.",
-        f"Hay {top.existencias} unidades en stock." if top.existencias is not None else "",
-        f"Puedes revisarlo aqui: /producto/{top.id}/.",
-    ]
-    descripcion = (top.descripcion or "").strip()
-    if descripcion:
-        respuesta_partes.append(descripcion)
-    if len(matches) > 1:
-        relacionados = ", ".join(match["producto"].nombre for match in matches[1:3])
-        if relacionados:
-            respuesta_partes.append(f"Tambien tenemos otras opciones como {relacionados}.")
-    respuesta = " ".join(part for part in respuesta_partes if part).strip()
+    respuesta = _compose_response(
+        f'Tenemos "{top.nombre}" ({top.categoria}) por {_format_price(top.precio)}.',
+        f"Hay {top.existencias} unidades disponibles." if top.existencias is not None else "Consulta su stock en la ficha del producto.",
+        f"Revísalo aquí: /producto/{top.id}/.",
+    )
     return {"answer": respuesta, "confidence": 0.9}
 
 
@@ -490,34 +696,47 @@ def _semantic_match(pregunta: str) -> dict:
     best_score = float(sims[best_idx]) if sims.size else 0.0
     if best_score < 0.25:
         return {"answer": DEFAULT_UNKNOWN_RESPONSE, "confidence": best_score}
-    return {"answer": respuestas[best_idx], "confidence": best_score}
+    answer = _compose_response(respuestas[best_idx])
+    return {"answer": answer, "confidence": best_score}
 
 
-def _fallback_answer(pregunta: str) -> dict:
+def _fallback_answer(pregunta: str, *, user_role: str | None = None) -> dict:
     """Devuelve una respuesta básica cuando el modelo no puede contestar."""
     question = (pregunta or "").strip()
     if not question:
-        return {"answer": "¿Podrías formular tu pregunta? Estoy aquí para ayudarte.", "confidence": 0.0}
+        return {
+            "answer": _compose_response(
+                "¿Podrías formular tu pregunta?",
+                "Estoy aquí para ayudarte con EpicAnimes.",
+            ),
+            "confidence": 0.0,
+        }
     tokens = _tokenize(question)
-    special = _special_response(question)
+    special = _special_response(question, user_role=user_role)
     if special:
         return {"answer": special, "confidence": 0.0}
     product = _product_answer(question, tokens)
     if product:
         return product
+    role_answer = _match_rule(question, tokens, user_role, _ROLE_DIALOG_RULES)
+    if role_answer:
+        return {"answer": role_answer, "confidence": 0.35}
+    faq_answer = _match_rule(question, tokens, user_role, _FAQ_RULES)
+    if faq_answer:
+        return {"answer": faq_answer, "confidence": 0.4}
     if not _question_relates_to_faq(tokens):
         return {"answer": DEFAULT_UNKNOWN_RESPONSE, "confidence": 0.0}
     semantic = _semantic_match(question)
     return semantic
 
 
-def responder(pregunta: str) -> dict:
+def responder(pregunta: str, user_role: str | None = None) -> dict:
     """Atiende una consulta usando el modelo neuronal y el respaldo semántico."""
     pregunta = (pregunta or "").strip()
     if not pregunta:
         return {"answer": "¿Podrías formular tu pregunta? Estoy aquí para ayudarte.", "confidence": 0.0}
     tokens = _tokenize(pregunta)
-    special = _special_response(pregunta)
+    special = _special_response(pregunta, user_role=user_role)
     if special:
         return {"answer": special, "confidence": 0.0}
     product = _product_answer(pregunta, tokens)
@@ -538,10 +757,10 @@ def responder(pregunta: str) -> dict:
             return semantic
         if semantic["answer"] == DEFAULT_UNKNOWN_RESPONSE and confianza < 0.75:
             return semantic
-        return {"answer": _ANSWERS[idx], "confidence": confianza}
+        return {"answer": _compose_response(_ANSWERS[idx]), "confidence": confianza}
     except RuntimeError as exc:
         logger.warning("TensorFlow no disponible, usando fallback: %s", exc)
-        return _fallback_answer(pregunta)
+        return _fallback_answer(pregunta, user_role=user_role)
     except Exception:
         logger.exception("Error al generar respuesta del chatbot")
-        return _fallback_answer(pregunta)
+        return _fallback_answer(pregunta, user_role=user_role)

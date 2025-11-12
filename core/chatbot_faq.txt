@@ -1,35 +1,253 @@
+# INVITADO (Usuario no autenticado)
+
+Pregunta: ¿Qué es EpicAnimes?
+Respuesta: Es una tienda online especializada en productos de anime, donde puedes comprar artículos originales de tus series favoritas.
+
+Pregunta: ¿Necesito cuenta para comprar?
+Respuesta: Sí, debes registrarte o iniciar sesión para completar tu compra y recibir confirmación del pedido.
+
 Pregunta: ¿Cuál es el horario de atención?
-Respuesta: Atendemos en línea todos los días de 09:00 a 21:00 hrs. Si escribes fuera de ese horario te responderemos apenas abramos al siguiente día hábil.
+Respuesta: Atendemos todos los días de 09:00 a 21:00 hrs. Si escribes fuera de ese horario, responderemos al día hábil siguiente.
 
-Pregunta: ¿Cuánto tarda el envío?
-Respuesta: Los envíos a Santiago demoran entre 24 y 48 horas hábiles y a regiones entre 3 y 5 días. Te enviaremos el número de seguimiento apenas salga tu pedido.
-
-Pregunta: ¿Qué opciones de pago aceptan?
-Respuesta: Puedes pagar con PayPal, tarjetas de crédito y débito internacionales o transferencia bancaria nacional. Escríbenos si necesitas otra alternativa.
+Pregunta: ¿Qué medios de pago aceptan?
+Respuesta: PayPal, tarjetas de crédito y débito internacionales, y transferencia bancaria nacional.
 
 Pregunta: ¿Puedo retirar en tienda?
-Respuesta: Por ahora solo realizamos ventas online con despacho. Estamos trabajando para habilitar un punto de retiro, lo anunciaremos en nuestras redes.
-
-Pregunta: ¿Cómo doy seguimiento a mi pedido?
-Respuesta: Revisa el correo de confirmación, ahí encontrarás el link de seguimiento. Si no lo recibiste contáctanos indicando tu número de orden para reenviártelo.
-
-Pregunta: ¿Qué hago si mi producto llegó dañado?
-Respuesta: Lamentamos el inconveniente. Escríbenos dentro de los primeros 5 días con fotos del daño y el número de orden; coordinaremos el cambio o reembolso.
+Respuesta: Por ahora solo realizamos ventas online. Pronto habilitaremos puntos de retiro presenciales.
 
 Pregunta: ¿Realizan envíos internacionales?
-Respuesta: Sí, enviamos a la mayoría de los países de Latinoamérica con DHL. Los costos pueden variar, consúltanos indicando tu ciudad para cotizar con precisión.
+Respuesta: Sí, enviamos a la mayoría de los países de Latinoamérica mediante DHL.
 
 Pregunta: ¿Ofrecen preventas?
-Respuesta: Sí, abrimos preventas con cupos limitados. Revisa la sección de novedades o suscríbete a nuestro newsletter para enterarte antes que todos.
-
-Pregunta: ¿Cómo puedo postular como vendedor?
-Respuesta: Completa el formulario de contacto en la sección Postula como vendedor, cuéntanos sobre tu catálogo y responderemos en máximo 48 horas hábiles.
+Respuesta: Sí, abrimos preventas con cupos limitados. Revisa la sección de novedades para ver los próximos lanzamientos.
 
 Pregunta: ¿Los productos son originales?
-Respuesta: Todos nuestros productos provienen de distribuidores oficiales. Trabajamos con controles de autenticidad y facturas para garantizar compras seguras.
+Respuesta: Todos provienen de distribuidores oficiales y cuentan con controles de autenticidad.
 
-Pregunta: ¿Puedo solicitar una factura?
-Respuesta: Sí, indícanos tus datos tributarios al momento de comprar o escríbenos a soporte@epicanimes.cl y enviaremos la factura electrónica correspondiente.
+Pregunta: ¿Cómo puedo registrarme?
+Respuesta: Ve al botón “Registrarse”, completa tus datos y confirma tu correo electrónico.
 
-Pregunta: ¿Qué pasa si un artículo aparece agotado?
-Respuesta: Puedes activar la alerta en la ficha del producto o escribirnos. Te avisaremos cuando vuelva a estar disponible o si tendremos una reposición cercana.
+Pregunta: ¿Puedo comprar sin iniciar sesión?
+Respuesta: No, debes tener una cuenta activa para procesar pagos y envíos correctamente.
+
+Pregunta: ¿Cómo cambio mi contraseña?
+Respuesta: Desde el formulario de inicio de sesión, selecciona “Olvidé mi contraseña” y sigue los pasos.
+
+Pregunta: ¿Qué hago si no recibí mi correo de confirmación?
+Respuesta: Revisa tu carpeta de spam o escríbenos a soporte@epicanimes.cl para reenviarte el enlace.
+
+Pregunta: ¿Dónde puedo ver el catálogo completo?
+Respuesta: En el menú “Tienda”, donde podrás filtrar por categorías o franquicias.
+
+Pregunta: ¿Puedo suscribirme a un boletín?
+Respuesta: Sí, deja tu correo en el pie de página para recibir novedades y descuentos exclusivos.
+
+Pregunta: ¿Qué pasa si el producto está agotado?
+Respuesta: Puedes activar una alerta en la ficha del producto y te avisaremos cuando vuelva a estar disponible.
+
+Pregunta: ¿Puedo reservar productos?
+Respuesta: Sí, si está habilitado el modo “Preventa”, puedes reservar con pago anticipado parcial.
+
+Pregunta: ¿Tienen tienda física?
+Respuesta: No por ahora. Somos 100 % online con despacho nacional e internacional.
+
+Pregunta: ¿Cómo contacto soporte?
+Respuesta: Escríbenos a soporte@epicanimes.cl o desde el formulario “Contáctanos”.
+
+Pregunta: ¿Puedo seguirlos en redes sociales?
+Respuesta: Sí, estamos en Instagram, Facebook y TikTok como @EpicAnimesCL.
+
+Pregunta: ¿Ofrecen garantía?
+Respuesta: Sí, todos los productos tienen garantía legal por defectos de fabricación.
+
+
+
+# COMPRADOR
+
+Pregunta: ¿Cómo realizo una compra?
+Respuesta: Agrega los productos al carrito, revisa tu pedido y selecciona “Finalizar compra”.
+
+Pregunta: ¿Cuánto tarda el envío?
+Respuesta: En Santiago, 24–48 h hábiles; en regiones, de 3 a 5 días hábiles.
+
+Pregunta: ¿Cómo doy seguimiento a mi pedido?
+Respuesta: Consulta el enlace de seguimiento que enviamos a tu correo al confirmar el pago.
+
+Pregunta: ¿Qué hago si mi producto llegó dañado?
+Respuesta: Escríbenos dentro de 5 días con fotos y el número de orden para gestionar cambio o reembolso.
+
+Pregunta: ¿Puedo cancelar mi compra?
+Respuesta: Sí, si el pedido aún no ha sido despachado. Contáctanos lo antes posible.
+
+Pregunta: ¿Cómo solicito una factura?
+Respuesta: Indica tus datos tributarios al comprar o escríbenos a soporte@epicanimes.cl
+
+Pregunta: ¿Cómo aplico un cupón de descuento?
+Respuesta: Antes de pagar, ingresa el código en el campo “Cupón” y se aplicará automáticamente.
+
+Pregunta: ¿Puedo cambiar la dirección de envío?
+Respuesta: Sí, antes del despacho. Contáctanos indicando tu número de orden.
+
+Pregunta: ¿Puedo combinar varios pedidos?
+Respuesta: Si no se han despachado, podemos unificarlos previa coordinación con soporte.
+
+Pregunta: ¿Puedo devolver un producto?
+Respuesta: Sí, dentro de los 10 días si está sin uso y con su embalaje original.
+
+Pregunta: ¿Puedo contactar al vendedor directamente?
+Respuesta: Sí, desde el detalle del pedido o ficha del producto.
+
+Pregunta: ¿Puedo dejar reseñas?
+Respuesta: Sí, tras recibir tu producto, puedes calificarlo y dejar tu opinión.
+
+Pregunta: ¿Puedo pagar en cuotas?
+Respuesta: Sí, dependiendo de tu banco y tarjeta, podrás dividir el pago al confirmar la compra.
+
+Pregunta: ¿Cómo sé si un producto está en stock?
+Respuesta: En la ficha del producto verás la disponibilidad actualizada en tiempo real.
+
+Pregunta: ¿Ofrecen regalos o envoltorios?
+Respuesta: Sí, puedes seleccionar la opción “Envoltura de regalo” antes de pagar.
+
+Pregunta: ¿Puedo pedir un reembolso parcial?
+Respuesta: Sí, si algún artículo de tu pedido no está disponible o fue cancelado.
+
+Pregunta: ¿Qué hago si no recibí confirmación de pago?
+Respuesta: Espera unos minutos o verifica con tu banco; si persiste, contáctanos con el comprobante.
+
+Pregunta: ¿Qué métodos de envío usan?
+Respuesta: Trabajamos con Chilexpress, Starken y DHL.
+
+Pregunta: ¿Cómo obtengo mis puntos o beneficios?
+Respuesta: Cada compra registrada acumula puntos visibles en tu panel de usuario.
+
+Pregunta: ¿Puedo cambiar el método de pago luego de comprar?
+Respuesta: No, pero podemos anular la orden y generar una nueva con el medio correcto.
+
+
+
+# VENDEDOR
+
+Pregunta: ¿Cómo postulo como vendedor?
+Respuesta: Completa el formulario “Postula como vendedor” y te responderemos dentro de 48 h hábiles.
+
+Pregunta: ¿Cómo agrego productos?
+Respuesta: En tu Dashboard, entra a “Mis productos” y usa el botón “Agregar nuevo”.
+
+Pregunta: ¿Cómo edito o elimino un producto?
+Respuesta: Desde “Mis productos”, selecciona el artículo y haz clic en “Editar” o “Eliminar”.
+
+Pregunta: ¿Qué es el stock crítico?
+Respuesta: Es la alerta que se activa cuando tienes 5 o menos unidades disponibles.
+
+Pregunta: ¿Dónde veo mis ventas?
+Respuesta: En tu Dashboard encontrarás un panel con tus ventas totales y recientes.
+
+Pregunta: ¿Cómo reviso mis métricas?
+Respuesta: En la sección “Estadísticas” del Dashboard, con gráficos de ventas y productos más vendidos.
+
+Pregunta: ¿Cómo recibo mis pagos?
+Respuesta: Los pagos se acreditan automáticamente una vez confirmada cada venta.
+
+Pregunta: ¿Puedo actualizar fotos o precios?
+Respuesta: Sí, al editar el producto desde tu panel.
+
+Pregunta: ¿Puedo pausar mis publicaciones?
+Respuesta: Sí, marca el producto como “Inactivo” para ocultarlo temporalmente.
+
+Pregunta: ¿Cómo sé si tengo stock bajo?
+Respuesta: El sistema te enviará una notificación y lo verás resaltado en rojo en tu panel.
+
+Pregunta: ¿Puedo ofrecer descuentos?
+Respuesta: Sí, ajusta el precio o activa promociones desde el editor del producto.
+
+Pregunta: ¿Cómo gestiono devoluciones?
+Respuesta: Revisa la solicitud en tu bandeja de devoluciones y coordina con el comprador.
+
+Pregunta: ¿Puedo enviar mensajes masivos a mis clientes?
+Respuesta: No, pero puedes responder consultas individuales desde el panel.
+
+Pregunta: ¿Qué hago si tengo un reclamo?
+Respuesta: Responde directamente desde el módulo de reclamos o contacta soporte.
+
+Pregunta: ¿Puedo ver mi ranking de vendedor?
+Respuesta: Sí, en tu panel de métricas figura tu calificación y posición global.
+
+Pregunta: ¿Puedo vender fuera de Chile?
+Respuesta: No directamente; las ventas internacionales las gestiona EpicAnimes central.
+
+Pregunta: ¿Cómo contacto soporte técnico?
+Respuesta: Desde tu panel, sección “Soporte vendedor”, o escribiendo a soporte@epicanimes.cl
+
+Pregunta: ¿Puedo agregar productos por lotes?
+Respuesta: Sí, usando la opción “Importar CSV” en tu Dashboard.
+
+Pregunta: ¿Qué pasa si un comprador cancela un pedido?
+Respuesta: El sistema lo notificará y el inventario se repondrá automáticamente.
+
+Pregunta: ¿Cómo actualizo mis datos comerciales?
+Respuesta: Desde el perfil de vendedor puedes modificar nombre, dirección y cuenta bancaria.
+
+
+
+# ADMINISTRADOR
+
+Pregunta: ¿Dónde veo las métricas generales?
+Respuesta: En el Dashboard Administrador encontrarás ventas totales, usuarios activos y rendimiento global.
+
+Pregunta: ¿Cómo gestiono reportes o incidencias?
+Respuesta: En “Reportes del sistema” puedes revisar y marcar incidencias como resueltas.
+
+Pregunta: ¿Puedo enviar avisos globales?
+Respuesta: Sí, desde el panel puedes generar notificaciones o correos masivos.
+
+Pregunta: ¿Cómo apruebo nuevos vendedores?
+Respuesta: Revisa “Postulaciones pendientes” y aprueba o rechaza según el cumplimiento de requisitos.
+
+Pregunta: ¿Puedo editar roles de usuario?
+Respuesta: Sí, desde “Usuarios registrados” puedes cambiar entre comprador, vendedor o admin.
+
+Pregunta: ¿Puedo suspender una cuenta?
+Respuesta: Sí, puedes desactivar temporalmente o eliminar cuentas desde la misma sección.
+
+Pregunta: ¿Dónde veo los logs del sistema?
+Respuesta: En “Monitoreo” se listan eventos, errores y auditorías.
+
+Pregunta: ¿Cómo gestiono mantenimientos?
+Respuesta: Programa periodos de mantenimiento desde “Configuración del sistema”.
+
+Pregunta: ¿Puedo modificar tarifas de envío?
+Respuesta: Sí, desde “Parámetros de venta” puedes actualizar precios o convenios logísticos.
+
+Pregunta: ¿Puedo generar reportes PDF?
+Respuesta: Sí, cada módulo del panel permite exportar informes en PDF o Excel.
+
+Pregunta: ¿Cómo restablezco contraseñas de usuarios?
+Respuesta: Usa la opción “Restablecer” en la ficha del usuario.
+
+Pregunta: ¿Cómo agrego nuevos administradores?
+Respuesta: En “Gestión de personal” puedes registrar cuentas con permisos administrativos.
+
+Pregunta: ¿Puedo revisar mensajes del chatbot?
+Respuesta: Sí, desde el panel de soporte puedes ver logs de conversación del chatbot.
+
+Pregunta: ¿Cómo cambio el banner del sitio?
+Respuesta: En “Gestión de contenido” puedes subir nuevas imágenes o promociones.
+
+Pregunta: ¿Cómo valido facturas o ventas sospechosas?
+Respuesta: Usa el módulo de auditoría y revisa las alertas generadas por el sistema.
+
+Pregunta: ¿Puedo eliminar productos inactivos?
+Respuesta: Sí, desde “Gestión de inventario” puedes depurar listados obsoletos.
+
+Pregunta: ¿Cómo monitoreo vendedores con bajo rendimiento?
+Respuesta: En el panel “Desempeño de vendedores” verás métricas de ventas y actividad.
+
+Pregunta: ¿Puedo revisar los pagos pendientes?
+Respuesta: Sí, en “Gestión de pagos” verás el estado de cada transacción.
+
+Pregunta: ¿Puedo crear nuevas categorías de productos?
+Respuesta: Sí, desde “Configuración de catálogo” puedes añadir o editar categorías.
+
+Pregunta: ¿Cómo hago copia de seguridad del sistema?
+Respuesta: Usa la función “Backup” en configuración o solicita respaldo al equipo técnico.

@@ -153,6 +153,17 @@
   max-width: 85%;
 }
 
+.chatbot-message__hint {
+  font-size: 0.75rem;
+  opacity: 0.7;
+  margin-bottom: 6px;
+  line-height: 1.3;
+}
+
+.chatbot-message__body {
+  white-space: pre-line;
+}
+
 .chatbot-message.bot {
   background: rgba(255, 255, 255, 0.08);
   color: #f7f7ff;
@@ -169,6 +180,15 @@
 
 .chatbot-suggestions {
   padding: 0 18px 12px;
+}
+
+.chatbot-suggestions__title {
+  margin: 0 0 6px;
+  font-size: 0.78rem;
+  color: rgba(255, 255, 255, 0.75);
+}
+
+.chatbot-suggestions__list {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;

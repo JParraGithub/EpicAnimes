@@ -13,18 +13,113 @@
   const csrfTokenMeta = document.querySelector('meta[name="csrf-token"]');
   const csrfToken = csrfTokenMeta ? csrfTokenMeta.getAttribute("content") : "";
   const API_URL = "/api/chatbot/ask/";
+  const panelRole = panel.dataset.chatbotRole || "anonimo";
+  const ROLE_HINTS = {
+    anonimo: "Navegas como invitado; regístrate o inicia sesión para personalizar tu experiencia.",
+    comprador: "Modo comprador activo; puedo ayudarte con pedidos, envíos y pagos.",
+    vendedor: "Modo vendedor activo; revisemos stock, productos y métricas.",
+    administrador: "Modo administrador activo; revisemos dashboards, usuarios o incidencias.",
+  };
+  const ROLE_GREETINGS = {
+    anonimo:
+      "¡Hola! ¿Qué tal?\nBienvenido a EpicAnimes, la tienda online de coleccionables de anime.\nPuedes registrarte o iniciar sesión desde el menú principal para guardar tus pedidos.",
+    comprador:
+      "¡Hola! ¿Qué tal?\nVeo tu sesión como comprador; te ayudo con compras, envíos y pagos.\nSi buscas un pedido revisa Mis compras o tu correo de confirmación.",
+    vendedor:
+      "¡Hola! ¿Qué tal?\nEstás en modo vendedor certificado; gestionemos productos, stock y alertas.\nRecuerda que avisamos cuando tu stock baja de 5 unidades.",
+    administrador:
+      "Veo que eres administrador; puedo ayudarte a navegar informes y tareas operativas.\n¡Hola! Soy EpicChat para administradores.\n¿En qué proceso necesitas apoyo con dashboards, usuarios o configuraciones?",
+  };
+  const ROLE_SUGGESTIONS = {
+    anonimo: [
+      "¿Qué es EpicAnimes?",
+      "¿Cómo me registro?",
+      "¿Qué categorías tienen?",
+    ],
+    comprador: [
+      "¿Cómo hago seguimiento a mi pedido?",
+      "¿Qué métodos de pago aceptan?",
+      "¿Cuánto demora el envío?",
+    ],
+    vendedor: [
+      "¿Cómo agrego un producto?",
+      "¿Dónde veo mis ventas?",
+      "¿Qué pasa si tengo poco stock?",
+    ],
+    administrador: [
+      "¿Dónde veo las métricas globales?",
+      "¿Cómo gestiono incidencias?",
+      "¿Cómo van los vendedores hoy?",
+    ],
+  };
+  let hintedRole = null;
+  const getRoleHint = (role) => {
+    if (!role || hintedRole === role) {
+      return null;
+    }
+    const hint = ROLE_HINTS[role] || `Tu rol actual es ${role}.`;
+    hintedRole = role;
+    return hint;
+  };
 
   const scrollToBottom = () => {
     messages.scrollTop = messages.scrollHeight;
   };
 
-  const appendMessage = (text, sender = "bot") => {
+  const appendMessage = (text, sender = "bot", { roleHint } = {}) => {
     const wrapper = document.createElement("div");
     wrapper.className = `chatbot-message ${sender}`;
-    wrapper.textContent = text;
+    if (roleHint) {
+      const hint = document.createElement("div");
+      hint.className = "chatbot-message__hint";
+      hint.textContent = roleHint;
+      wrapper.appendChild(hint);
+    }
+    const body = document.createElement("div");
+    body.className = "chatbot-message__body";
+    body.textContent = text;
+    wrapper.appendChild(body);
     messages.appendChild(wrapper);
     scrollToBottom();
     return wrapper;
+  };
+
+  const renderInitialMessage = () => {
+    if (!messages) return;
+    const initial = messages.querySelector(".chatbot-message.bot[data-initial='true']");
+    if (!initial) return;
+    const hintText = ROLE_HINTS[panelRole] || "";
+    const greetingText =
+      ROLE_GREETINGS[panelRole] || ROLE_GREETINGS.comprador || "¡Hola! Soy EpicChat.";
+    initial.innerHTML = "";
+    if (hintText) {
+      const hintEl = document.createElement("div");
+      hintEl.className = "chatbot-message__hint";
+      hintEl.textContent = hintText;
+      initial.appendChild(hintEl);
+    }
+    const bodyEl = document.createElement("div");
+    bodyEl.className = "chatbot-message__body";
+    bodyEl.textContent = greetingText;
+    initial.appendChild(bodyEl);
+    hintedRole = panelRole;
+  };
+
+  const configureSuggestions = () => {
+    if (!suggestionButtons.length) return;
+    const suggestions = ROLE_SUGGESTIONS[panelRole] || ROLE_SUGGESTIONS.comprador || [];
+    suggestionButtons.forEach((btn, index) => {
+      const text = suggestions[index] || suggestions[0] || "¿Qué puedo hacer en EpicAnimes?";
+      btn.textContent = text;
+      btn.dataset.suggestionText = text;
+    });
+    const title = document.getElementById("chatbot-suggestions-title");
+    if (title) {
+      title.textContent =
+        panelRole === "anonimo"
+          ? "¿Nueva o nuevo por aquí? Intenta con estas preguntas:"
+          : "¿Necesitas ideas? Pregunta por:";
+    }
   };
 
   const addTypingIndicator = () => {
@@ -76,6 +171,8 @@
   if (!initialHidden) {
     if (reopenBtn) reopenBtn.hidden = true;
   }
+  renderInitialMessage();
+  configureSuggestions();
 
   bubble.addEventListener("click", (event) => {
     if (root.classList.contains("chatbot-hidden")) {
@@ -135,7 +232,8 @@
       if (!data.ok) {
         appendMessage(data.error || "Lo siento, no pude responder eso ahora mismo.", "bot");
       } else {
-        appendMessage(data.answer, "bot");
+        const hint = getRoleHint(data.user_role);
+        appendMessage(data.answer, "bot", { roleHint: hint });
       }
     } catch (error) {
       typing.remove();
@@ -158,7 +256,7 @@
 
   suggestionButtons.forEach((btn) => {
     btn.addEventListener("click", () => {
-      const question = btn.textContent.trim();
+      const question = (btn.dataset.suggestionText || btn.textContent || "").trim();
       if (!question) return;
       input.value = "";
       sendQuestion(question);
