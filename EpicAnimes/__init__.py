@@ -1,5 +1,1 @@
-"""Configura PyMySQL para que el proyecto utilice el driver como MySQLdb."""
-
-import pymysql
-
-pymysql.install_as_MySQLdb()
+"""Compatibilidad para despliegues que esperan el paquete `epicanimes`."""

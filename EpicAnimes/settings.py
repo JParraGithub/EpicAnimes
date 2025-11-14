@@ -131,8 +131,8 @@ USE_TZ = True
 
 STATIC_URL = '/static/'
 
-# Definir STATIC_ROOT al desplegar en producción, por ejemplo:
-# STATIC_ROOT = os.path.join(BASE_DIR, 'production_static')
+# Colección de estáticos en un directorio dedicado para deployment/CI.
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 STATICFILES_DIRS = [
     os.path.join(BASE_DIR, 'static'),

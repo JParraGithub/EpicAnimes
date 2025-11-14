@@ -1,4 +1,4 @@
-"""Configura la interfaz WSGI necesaria para desplegar EpicAnimes."""
+"""Configura la interfaz WSGI necesaria para desplegar la aplicación."""
 
 import os
 
