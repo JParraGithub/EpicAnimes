@@ -1,5 +1,7 @@
 """Define los modelos principales que describen el dominio de EpicAnimes."""
 
+from decimal import Decimal
+
 from django.conf import settings
 from django.db import models
 from django.contrib.auth.models import User
@@ -79,10 +81,26 @@ class Compra(models.Model):
     cantidad = models.IntegerField()
     fecha_compra = models.DateField(auto_now_add=True)
     referencia_pago = models.CharField(max_length=100, blank=True, null=True)
+    ESTADO_ENTREGA_CHOICES = [
+        ("pendiente", "Pendiente"),
+        ("procesando", "Procesando"),
+        ("enviado", "Enviado"),
+        ("entregado", "Entregado"),
+    ]
+    estado_entrega = models.CharField(
+        max_length=20,
+        choices=ESTADO_ENTREGA_CHOICES,
+        default="pendiente",
+        help_text="Estado actual del despacho del pedido.",
+    )
 
     def __str__(self):
         nombre = self.cliente or (self.usuario.username if self.usuario else "Cliente")
         return f"{nombre} - {self.producto}"
+
+    @property
+    def total_valor(self):
+        return (self.valor_producto or Decimal("0")) * self.cantidad
 
 
 class PerfilCliente(models.Model):
@@ -96,6 +114,7 @@ class PerfilCliente(models.Model):
     ciudad = models.CharField(max_length=80, blank=True)
     codigo_postal = models.CharField(max_length=20, blank=True)
     pais = models.CharField(max_length=60, blank=True, default="Chile")
+    foto = models.ImageField(upload_to="perfiles/", blank=True, null=True, help_text="Fotografía de perfil usada en el área de cliente.")
     actualizado = models.DateTimeField(auto_now=True)
 
     def __str__(self):

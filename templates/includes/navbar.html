@@ -23,21 +23,36 @@
         <span class="cart-count">{{ cart_count|default:0 }}</span>
       </a>
       {% if request.user.is_authenticated %}
-        <div class="user-pill">
-          <i class="fa fa-user"></i>
-          <span>{{ request.user.username }}</span>
+        <div class="user-pill user-pill--dropdown">
+          <button type="button" class="user-pill__toggle" aria-haspopup="true" aria-expanded="false">
+            {% with request.user.get_full_name|default:request.user.username as display_name %}
+              {% if perfil_cliente and perfil_cliente.foto %}
+                <img class="user-pill__avatar" src="{{ perfil_cliente.foto.url }}" alt="Foto de {{ display_name }}">
+              {% else %}
+                <span class="user-pill__avatar-placeholder">{{ request.user.username|slice:":1"|upper }}</span>
+              {% endif %}
+              <span>{{ display_name }}</span>
+            {% endwith %}
+            <i class="fa fa-chevron-down"></i>
+          </button>
+          <div class="user-menu">
+            <a href="{% url 'perfil_usuario' %}">Ir a cuenta</a>
+            <a href="{% url 'editar_perfil' %}">Editar perfil</a>
+            <a href="{% url 'historial_pedidos' %}">Historial de compras</a>
+            {% if rol_usuario == "administrador" %}
+              <a href="{% url 'dashboard_administrador' %}">Panel admin</a>
+            {% elif rol_usuario == "vendedor" %}
+              <a href="{% url 'dashboard_vendedor' %}">Panel vendedor</a>
+            {% endif %}
+            {% if rol_usuario == "comprador" %}
+              <a href="{% url 'carrito' %}">Ver carrito</a>
+            {% endif %}
+            <form method="post" action="{% url 'logout' %}">
+              {% csrf_token %}
+              <button type="submit">Salir</button>
+            </form>
+          </div>
         </div>
-        {% if rol_usuario == "administrador" %}
-          <a class="btn btn--ghost small" href="{% url 'dashboard_administrador' %}">Panel admin</a>
-        {% elif rol_usuario == "vendedor" %}
-          <a class="btn btn--ghost small" href="{% url 'dashboard_vendedor' %}">Panel vendedor</a>
-        {% else %}
-          <a class="btn btn--ghost small" href="{% url 'carrito' %}">Ver carrito</a>
-        {% endif %}
-        <form method="post" action="{% url 'logout' %}" class="logout-form">
-          {% csrf_token %}
-          <button type="submit" class="btn btn--ghost small logout-button">Salir</button>
-        </form>
       {% else %}
         {% if not hide_login_cta %}
           <a class="btn btn--primary small" href="{% url 'login' %}">

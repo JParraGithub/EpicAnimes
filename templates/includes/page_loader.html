@@ -1,4 +1,53 @@
 {% load static %}
+<style>
+  .page-loader{
+    position:fixed;
+    inset:0;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    gap:18px;
+    background:radial-gradient(circle at top,#0c1224,rgba(7,11,26,0.95));
+    color:#f6f8ff;
+    z-index:9999;
+    transition:opacity .35s ease,visibility .35s ease;
+  }
+  .page-loader.is-hidden{
+    opacity:0;
+    visibility:hidden;
+    pointer-events:none;
+  }
+  .page-loader__spinner{
+    width:64px;
+    height:64px;
+    border-radius:50%;
+    border:4px solid rgba(255,255,255,.15);
+    border-top-color:#e94560;
+    border-right-color:#62b3ff;
+    animation:loader-spin 1s linear infinite;
+  }
+  .page-loader__label{
+    font-size:.95rem;
+    letter-spacing:.08em;
+    text-transform:uppercase;
+    color:#cdd6ff;
+    text-align:center;
+  }
+  .sr-only{
+    position:absolute;
+    width:1px;
+    height:1px;
+    padding:0;
+    margin:-1px;
+    overflow:hidden;
+    clip:rect(0,0,0,0);
+    border:0;
+  }
+  @keyframes loader-spin{
+    to{transform:rotate(360deg);}
+  }
+</style>
 <div id="pageLoader" class="page-loader" aria-live="polite" aria-label="Cargando EpicAnimes">
   <div class="page-loader__spinner" role="status" aria-hidden="false"></div>
   <p class="page-loader__label">Preparando tu experiencia otaku...</p>

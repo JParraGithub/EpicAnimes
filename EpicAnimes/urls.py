@@ -5,6 +5,8 @@ from django.urls import path, include
 from django.views.generic import RedirectView
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+from django.contrib.staticfiles.storage import staticfiles_storage
 
 from core.views import (
     # Agrupa las vistas públicas utilizadas por el sitio.
@@ -19,6 +21,8 @@ from core.views import (
 
     # Describe vistas auxiliares para el proceso de autenticación.
     redireccion_usuario,
+    editar_perfil,
+    historial_pedidos,
     CoreLoginView,
     CustomPasswordResetView,
     send_login_otp,
@@ -66,6 +70,9 @@ urlpatterns = [
     # Expone la administración nativa de Django.
     path('admin/', admin.site.urls),
 
+    # Sirve el favicon en la raíz del sitio para las solicitudes automáticas del navegador.
+    path('favicon.ico', RedirectView.as_view(url=staticfiles_storage.url('media/favicons/favicon.ico'), permanent=False)),
+
     # Configura las rutas de autenticación.
     path('accounts/login/', CoreLoginView.as_view(), name='login'),
     path('accounts/send-otp/', send_login_otp, name='send_login_otp'),
@@ -96,6 +103,9 @@ urlpatterns = [
 
     # Controla la redirección posterior al login.
     path('accounts/profile/', redireccion_usuario, name='redireccion_usuario'),
+    path('accounts/profile/editar/', editar_perfil, name='perfil_usuario'),  # alias para ir a la cuenta del usuario
+    path('accounts/profile/editar/', editar_perfil, name='editar_perfil'),
+    path('accounts/profile/historial/', historial_pedidos, name='historial_pedidos'),
 
     # Endpoints disponibles para vendedores.
     path('api/vendedor/resumen/', api_vendedor_resumen, name='api_vendedor_resumen'),
@@ -143,4 +153,6 @@ urlpatterns = [
 # Sirve los archivos multimedia durante el desarrollo.
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+urlpatterns += staticfiles_urlpatterns()
 

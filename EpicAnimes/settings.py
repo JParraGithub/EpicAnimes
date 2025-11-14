@@ -4,17 +4,22 @@ from pathlib import Path
 from decimal import Decimal, InvalidOperation
 import os
 
+import pymysql
+pymysql.install_as_MySQLdb()
 from dotenv import load_dotenv
+from decouple import config
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Carga las variables declaradas en .env para unificar credenciales locales.
 load_dotenv(BASE_DIR / ".env")
-SECRET_KEY = 'django-insecure-xib&5e3w-6x4dl+eao4vqke*l(@+blwru@!4h)m@zp)*to^*do'
-DEBUG = True
+SECRET_KEY = config('SECRET_KEY')
+DEBUG = config('DEBUG', cast=bool)
 
 ALLOWED_HOSTS = []
-
+RENDER_EXTERNAL_HOSTNAME = config('RENDER_EXTERNAL_HOSTNAME', default='')
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(RENDER_EXTERNAL_HOSTNAME)
 
 # Declara las aplicaciones instaladas que participan en el proyecto.
 INSTALLED_APPS = [
@@ -39,6 +44,7 @@ MIDDLEWARE = [
     'core.middleware.LastSeenMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
 ]
 
 ROOT_URLCONF = 'EpicAnimes.urls'
@@ -54,6 +60,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'core.context_processors.perfil_cliente',
             ],
         },
     },
@@ -66,12 +73,12 @@ WSGI_APPLICATION = 'EpicAnimes.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'epicanimes',
-        'USER': 'root',
-        'PASSWORD': '',  # Define la contraseña configurada en el equipo local.
-        'HOST': '127.0.0.1',
-        'PORT': '3306',
+        'ENGINE': config('DB_ENGINE'),
+        'NAME': config('DB_NAME'),
+        'USER': config('DB_USER'),
+        'PASSWORD': config('DB_PASSWORD'),  # Define la contraseña configurada en el equipo local.
+        'HOST': config('DB_HOST'),
+        'PORT': config('DB_PORT', cast=int),
         'OPTIONS': {
             'charset': 'utf8mb4',
             'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
@@ -135,6 +142,14 @@ MEDIA_URL = '/media/'
 
 MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
+if not DEBUG:
+    # Tell Django to copy static assets into a path called `staticfiles` (this is specific to Render)
+    STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+    # Enable the WhiteNoise storage backend, which compresses static files to reduce disk use
+    # and renames the files with unique names for each version to support long-term caching
+    STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 LOGIN_REDIRECT_URL = '/accounts/profile/'
 LOGOUT_REDIRECT_URL = '/index/'
 LOGIN_URL = '/accounts/login/'
@@ -169,12 +184,12 @@ PAYPAL_CONVERSION_TIMEOUT = int(os.environ.get("PAYPAL_CONVERSION_TIMEOUT", 8))
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Configura el backend de correo que utiliza la plataforma.
-EMAIL_HOST = 'smtp.gmail.com'
-EMAIL_HOST_USER = 'miguelneira.albo@gmail.com'  # Identifica la casilla del bot epicanimes_bot_correos.
-EMAIL_HOST_PASSWORD = 'zgzonkwvbixixqjn'
+EMAIL_HOST = config('EMAIL_HOST')
+EMAIL_HOST_USER = config('EMAIL_HOST_USER')  # Identifica la casilla del bot epicanimes_bot_correos.
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD')
 EMAIL_BACKEND = 'core.email_backends.GmailTLSBackend'
-EMAIL_PORT = 465
-EMAIL_USE_SSL = True
-EMAIL_USE_TLS = False
+EMAIL_PORT = config('EMAIL_PORT', cast=int)
+EMAIL_USE_SSL = config('EMAIL_USE_SSL', default=False, cast=bool)
+EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
 DEFAULT_FROM_EMAIL = f'EpicAnimes <{EMAIL_HOST_USER}>'
 SERVER_EMAIL = DEFAULT_FROM_EMAIL

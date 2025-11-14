@@ -19,12 +19,13 @@ import logging
 
 from django.contrib import messages
 
-from django.contrib.auth import login as auth_login
+from django.contrib.auth import login as auth_login, update_session_auth_hash
 
 from django.contrib.auth.decorators import login_required
 
 from django.contrib.auth.models import User, Group
 
+from django.contrib.auth.forms import PasswordChangeForm
 from django.contrib.auth.views import LoginView, PasswordResetView
 
 from django.core.exceptions import ValidationError
@@ -74,7 +75,13 @@ from django.views.decorators.http import require_http_methods
 
 
 
-from .forms import LoginForm, RegistroClienteForm, PostulacionVendedorForm, TwoFactorLoginForm
+from .forms import (
+    LoginForm,
+    RegistroClienteForm,
+    PostulacionVendedorForm,
+    TwoFactorLoginForm,
+    PerfilClienteForm,
+)
 from .models import Vendedor, Producto, Venta, Compra, PerfilCliente, PostulacionVendedor, NewsletterSubscriber
 from .payments import (
     paypal_capture_order,
@@ -115,6 +122,66 @@ def _validar_imagen_producto(imagen, *, max_mb=PRODUCT_IMAGE_MAX_MB, max_width=P
         raise ValidationError("No pude leer la imagen. Usa formatos JPG o PNG válidos.")
     if width > max_width or height > max_height:
         raise ValidationError(f"La imagen debe medir como máximo {max_width}x{max_height} px.")
+
+
+@login_required
+@require_http_methods(["GET", "POST"])
+def editar_perfil(request):
+    """Permite al cliente actualizar sus datos de contacto y contraseña."""
+    perfil, _ = PerfilCliente.objects.get_or_create(user=request.user)
+    perfil_form = PerfilClienteForm(instance=perfil)
+    def _decorate_password_form(form):
+        for field in form.fields.values():
+            field.widget.attrs.setdefault("class", "form-input")
+        return form
+
+    password_form = _decorate_password_form(PasswordChangeForm(user=request.user))
+    password_card_open = True
+
+    if request.method == "POST":
+        if "perfil_submit" in request.POST:
+            perfil_form = PerfilClienteForm(request.POST, request.FILES, instance=perfil)
+            if perfil_form.is_valid():
+                perfil = perfil_form.save()
+                nombre_completo = perfil_form.cleaned_data.get("nombre") or ""
+                correo = perfil_form.cleaned_data.get("email") or request.user.email
+                request.user.first_name = nombre_completo
+                request.user.email = correo
+                request.user.save()
+                messages.success(request, "Tus datos de perfil se guardaron correctamente.")
+                return redirect("editar_perfil")
+        elif "password_submit" in request.POST:
+            password_card_open = True
+            password_form = _decorate_password_form(PasswordChangeForm(user=request.user, data=request.POST))
+            if password_form.is_valid():
+                password_form.save()
+                update_session_auth_hash(request, password_form.user)
+                messages.success(request, "Tu contraseña se actualizó correctamente.")
+                return redirect("editar_perfil")
+
+    contexto = {
+        "perfil_form": perfil_form,
+        "password_form": password_form,
+        "perfil": perfil,
+        "password_card_open": password_card_open,
+    }
+    return render(request, "registration/profile_edit.html", contexto)
+
+
+@login_required
+@require_http_methods(["GET"])
+def historial_pedidos(request):
+    """Muestra los pedidos previos del comprador autenticado."""
+    if obtener_rol_usuario(request.user) != "comprador":
+        return HttpResponseForbidden("Solo los compradores pueden ver su historial.")
+
+    compras = (
+        Compra.objects.filter(usuario=request.user)
+        .select_related("producto")
+        .order_by("-fecha_compra")
+    )
+
+    return render(request, "registration/order_history.html", {"compras": compras})
 
 
 @require_http_methods(["POST"])

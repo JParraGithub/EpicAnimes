@@ -127,7 +127,7 @@ class PerfilClienteForm(forms.ModelForm):
 
     class Meta:
         model = PerfilCliente
-        fields = ["nombre", "email", "telefono", "direccion", "ciudad", "codigo_postal", "pais"]
+        fields = ["nombre", "email", "telefono", "direccion", "ciudad", "codigo_postal", "pais", "foto"]
         labels = {
             "nombre": "Nombre completo",
             "email": "Correo electrónico",
@@ -136,6 +136,7 @@ class PerfilClienteForm(forms.ModelForm):
             "ciudad": "Ciudad",
             "codigo_postal": "Código postal",
             "pais": "País",
+            "foto": "Fotografía personal",
         }
         widgets = {
             "nombre": forms.TextInput(attrs={"class": "form-control", "placeholder": "Tu nombre"}),
@@ -145,4 +146,7 @@ class PerfilClienteForm(forms.ModelForm):
             "ciudad": forms.TextInput(attrs={"class": "form-control", "placeholder": "Ciudad"}),
             "codigo_postal": forms.TextInput(attrs={"class": "form-control", "placeholder": "Código postal"}),
             "pais": forms.TextInput(attrs={"class": "form-control", "placeholder": "País", "value": "Chile"}),
+            # Usamos FileInput en lugar de ClearableFileInput para evitar
+            # el texto "Actualmente" que rompe el layout personalizado.
+            "foto": forms.FileInput(attrs={"class": "form-control-file", "accept": "image/*"}),
         }

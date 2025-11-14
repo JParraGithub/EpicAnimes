@@ -222,6 +222,7 @@ body.theme-cool::before {
   display: grid;
   grid-template-columns: 1fr;
   gap: 18px;
+  justify-items: center;
 }
 
 .chart-box {
@@ -275,12 +276,12 @@ body.theme-cool::before {
   display: none !important;
 }
 
+/* Grafico de barras */ 
+
 .chart-box__canvas--bars {
   position: relative;
   width: 100%;
-  min-height: 260px;
-  height: clamp(240px, 35vw, 360px);
-  max-height: 400px;
+  height: 280px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -295,6 +296,34 @@ body.theme-cool::before {
 
 .chart-box__canvas--bars .chart-placeholder {
   inset: 12px;
+}
+
+#estadoGlobalBox,
+#ventasPorUsuarioBox,
+#ventasActividadBox {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+#ventasPorUsuarioBox canvas,
+#ventasActividadBox canvas {
+  width: 100% !important;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: block;
+}
+
+/* Gráfico donut de Estado Global: tamaño más contenido */
+#estadoGlobalBox .ventas-usuarios-chart {
+  display: flex;
+  justify-content: center;
+}
+
+#estadoGlobalBox canvas {
+  width: 100%;
+  max-width: 420px;
+  height: 320px;
 }
 
 .vendor-estado-box,

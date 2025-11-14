@@ -3,12 +3,33 @@
   const loader = document.getElementById("pageLoader");
   if (!loader) return;
 
-  const show = () => loader.classList.remove("is-hidden");
-  const hide = () => loader.classList.add("is-hidden");
+  let fallbackTimer;
+
+  const show = () => {
+    loader.classList.remove("is-hidden");
+    clearTimeout(fallbackTimer);
+    fallbackTimer = window.setTimeout(() => {
+      if (!loader.classList.contains("is-hidden")) {
+        loader.classList.add("is-hidden");
+      }
+    }, 4000);
+  };
+
+  const hide = () => {
+    clearTimeout(fallbackTimer);
+    loader.classList.add("is-hidden");
+  };
 
   window.addEventListener("load", () => {
     window.requestAnimationFrame(hide);
   });
+
+  const scheduleHide = () => window.requestAnimationFrame(hide);
+  if (document.readyState === "complete") {
+    scheduleHide();
+  } else {
+    document.addEventListener("DOMContentLoaded", scheduleHide, { once: true });
+  }
 
   window.addEventListener("pageshow", (event) => {
     if (event.persisted) hide();

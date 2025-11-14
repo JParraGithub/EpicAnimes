@@ -1,0 +1,157 @@
+{% extends "registration/auth_base.html" %}
+{% load static %}
+{% block title %}Historial de pedidos | EpicAnimes{% endblock %}
+
+{% block extra_head %}
+<style>
+  .order-history-grid{
+    grid-template-columns:minmax(0, 900px);
+    justify-content:center;
+  }
+  .order-history {
+    margin-top: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .order-card {
+    padding: 22px;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    box-shadow: 0 8px 30px rgba(10, 10, 40, 0.25);
+  }
+
+  .order-card__header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .order-card__date {
+    font-size: 0.95rem;
+    color: var(--auth-muted);
+  }
+
+  .badge {
+    padding: 6px 14px;
+    border-radius: 999px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: capitalize;
+  }
+
+  .badge--pendiente {
+    background: rgba(255, 210, 77, 0.18);
+    color: #ffb703;
+  }
+
+  .badge--procesando {
+    background: rgba(56, 163, 165, 0.18);
+    color: #06b6d4;
+  }
+
+  .badge--enviado {
+    background: rgba(59, 130, 246, 0.18);
+    color: #60a5fa;
+  }
+
+  .badge--entregado {
+    background: rgba(34, 197, 94, 0.18);
+    color: #4ade80;
+  }
+
+  .order-card__detail {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  .order-card__detail strong {
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .order-card__footer {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .order-card__footer span {
+    font-size: 0.95rem;
+    color: var(--auth-muted);
+  }
+
+  .order-link {
+    margin-bottom: 12px;
+    font-size: 0.9rem;
+    color: var(--auth-muted);
+  }
+</style>
+{% endblock %}
+
+{% block auth_content %}
+  <section class="auth-grid order-history-grid">
+    <div class="auth-card glass">
+      <div class="auth-card__header">
+        <span class="pill"><i class="fa fa-list-check"></i> Historial</span>
+        <h1>Pedidos anteriores</h1>
+        <p>Consulta fechas, montos y el estado de entrega de cada pedido.</p>
+        <a class="order-link" href="{% url 'editar_perfil' %}">Actualiza tu perfil</a>
+      </div>
+
+      <div class="order-history">
+        {% if compras %}
+          {% for compra in compras %}
+            <article class="order-card" data-status="{{ compra.estado_entrega }}">
+              <div class="order-card__header">
+                <div>
+                  <strong>#{{ compra.id }}</strong>
+                  <div class="order-card__date">{{ compra.fecha_compra|date:"d \\d\\e F Y" }}</div>
+                </div>
+                <span class="badge badge--{{ compra.estado_entrega }}">{{ compra.get_estado_entrega_display }}</span>
+              </div>
+
+              <div class="order-card__detail">
+                <div>
+                  <strong>Producto</strong>
+                  <a href="{% url 'producto_detalle' compra.producto.id %}">{{ compra.producto.nombre }}</a>
+                  <p>{{ compra.producto.marca }}</p>
+                </div>
+                <div>
+                  <strong>Precio unitario</strong>
+                  <p>${{ compra.valor_producto|floatformat:0 }}</p>
+                </div>
+                <div>
+                  <strong>Cantidad</strong>
+                  <p>{{ compra.cantidad }}</p>
+                </div>
+                <div>
+                  <strong>Total</strong>
+                  <p>${{ compra.total_valor|floatformat:0 }}</p>
+                </div>
+              </div>
+
+              <div class="order-card__footer">
+                <span>Entrega estimada: {{ compra.fecha_compra|date:"d/m/Y" }}</span>
+                <span>Estado de pago: {{ compra.estado_entrega|capfirst }}</span>
+              </div>
+            </article>
+          {% endfor %}
+        {% else %}
+          <div class="message message--info">
+            <i class="fa fa-info-circle"></i>
+            <span>No hay pedidos registrados aún. Explora el catálogo para comenzar tu colección.</span>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </section>
+{% endblock %}

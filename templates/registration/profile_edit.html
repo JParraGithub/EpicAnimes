@@ -1,0 +1,529 @@
+{% extends "registration/auth_base.html" %}
+{% load static %}
+{% block title %}Editar perfil | EpicAnimes{% endblock %}
+
+{% block extra_head %}
+<style>
+  .profile-grid{
+    grid-template-columns:minmax(0, 1200px);
+    justify-content:center;
+  }
+  .profile-layout{
+    margin-top:20px;
+    display:flex;
+    flex-direction:column;
+    gap:28px;
+  }
+  .profile-form{
+    display:flex;
+    flex-direction:column;
+    gap:22px;
+  }
+  .profile-form__grid{
+    display:grid;
+    grid-template-columns:minmax(340px,1.1fr) minmax(600px,2.4fr);
+    gap:32px;
+    align-items:start;
+  }
+  .profile-summary{
+    border-radius:22px;
+    border:1px solid rgba(255,255,255,.12);
+    background:linear-gradient(180deg,rgba(255,255,255,.09),rgba(5,9,22,.4));
+    box-shadow:0 28px 55px rgba(5,10,26,.55);
+    padding:26px 22px;
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+  .profile-summary__heading{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .profile-avatar{
+    width:120px;
+    height:120px;
+    border-radius:24px;
+    background:rgba(255,255,255,.1);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+  }
+  .profile-avatar img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    display:block;
+  }
+  .profile-avatar__placeholder{
+    font-size:2rem;
+    font-weight:700;
+    color:#fff;
+    letter-spacing:.08em;
+  }
+  .profile-avatar__cta{
+    align-self:flex-start;
+    border:none;
+    border-radius:999px;
+    padding:8px 14px;
+    background:rgba(98,179,255,.12);
+    color:#fff;
+    font-size:.85rem;
+    letter-spacing:.05em;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    cursor:pointer;
+  }
+  .profile-meta{
+    list-style:none;
+    margin:0;
+    padding:0;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .profile-meta li{
+    display:flex;
+    gap:10px;
+    padding:10px 12px;
+    border-radius:16px;
+    border:1px solid rgba(255,255,255,.08);
+    background:rgba(5,9,22,.5);
+  }
+  .profile-meta i{
+    color:var(--auth-accent-2);
+    margin-top:3px;
+  }
+  .profile-meta span{
+    display:block;
+    font-size:.8rem;
+    color:var(--auth-muted);
+    text-transform:uppercase;
+    letter-spacing:.08em;
+  }
+  .profile-meta strong{
+    font-size:1rem;
+  }
+  .profile-summary__actions,
+  .profile-actions__links{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .profile-summary__actions a,
+  .profile-actions__links a{
+    text-decoration:none;
+    color:#f0f4ff;
+    border-radius:14px;
+    border:1px solid rgba(255,255,255,.08);
+    padding:10px 12px;
+    display:flex;
+    align-items:center;
+    gap:8px;
+    background:rgba(0,0,0,.25);
+    transition:background .2s,border-color .2s;
+  }
+  .profile-actions__links .auth-cta{
+    width:100%;
+    justify-content:center;
+  }
+  .toggle-password-btn{
+    background:rgba(98,179,255,.18);
+    border:1px solid rgba(98,179,255,.35);
+    color:#f6f8ff;
+  }
+  .toggle-password-btn.is-open{
+    background:rgba(233,69,96,.18);
+    border-color:rgba(233,69,96,.45);
+  }
+  .profile-summary__actions a:hover,
+  .profile-actions__links a:hover{
+    background:rgba(98,179,255,.15);
+    border-color:rgba(98,179,255,.4);
+  }
+  .file-upload{
+    position:relative;
+    border:1px dashed rgba(255,255,255,.25);
+    border-radius:18px;
+    padding:14px;
+    text-align:center;
+    background:rgba(255,255,255,.05);
+    cursor:pointer;
+    transition:border-color .2s,background .2s;
+  }
+  .file-upload input[type=file]{
+    position:absolute;
+    inset:0;
+    opacity:0;
+    cursor:pointer;
+  }
+  .file-upload :is(.clearable-file-input, .clearable-file-input > *){
+    display:none !important;
+  }
+  .file-upload__hint{
+    display:block;
+    margin-top:6px;
+    font-size:.85rem;
+    color:var(--auth-muted);
+  }
+  .profile-fields{
+    border-radius:22px;
+    border:1px solid rgba(255,255,255,.12);
+    background:linear-gradient(180deg,rgba(5,9,22,.92),rgba(5,9,22,.7));
+    padding:28px 30px;
+    box-shadow:0 28px 48px rgba(0,0,0,.55);
+    display:flex;
+    flex-direction:column;
+    gap:24px;
+  }
+  .field-section h3{
+    margin:0 0 10px;
+    font-size:.95rem;
+    text-transform:uppercase;
+    letter-spacing:.08em;
+    color:var(--auth-muted);
+  }
+  .field-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:16px 18px;
+  }
+  .profile-actions{
+    display:flex;
+    flex-wrap:wrap;
+    gap:12px;
+    justify-content:flex-end;
+  }
+  .profile-actions .btn-link{
+    background:transparent;
+    border:none;
+    color:var(--auth-muted);
+    text-decoration:underline;
+    cursor:pointer;
+    padding:0;
+  }
+  .password-card{
+    display:block;
+    min-height:220px;
+    border-radius:22px;
+    border:1px solid rgba(255,255,255,.12);
+    background:linear-gradient(200deg,rgba(13,19,40,.95),rgba(4,8,20,.78));
+    box-shadow:0 22px 44px rgba(0,0,0,.45);
+    padding:28px 30px;
+    color:#f6f7ff;
+  }
+  .password-card.is-hidden{
+    display:none;
+  }
+  .password-card form{
+    display:flex;
+    flex-direction:column;
+    gap:18px;
+  }
+  .password-card .form-field{
+    margin:0;
+  }
+  .password-card .input-icon .form-input{
+    background:rgba(255,255,255,.08);
+    border-color:rgba(255,255,255,.16);
+  }
+  .password-card button.auth-cta{
+    width:100%;
+  }
+  .password-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
+    gap:16px 18px;
+  }
+  .password-card__actions{
+    display:flex;
+    justify-content:flex-end;
+    gap:12px;
+    flex-wrap:wrap;
+    align-items:center;
+  }
+  .password-card__actions .btn-link{
+    background:transparent;
+    border:none;
+    color:var(--auth-muted);
+    text-decoration:underline;
+    cursor:pointer;
+    padding:0;
+  }
+  .password-tips{
+    margin:0 0 14px;
+    padding-left:20px;
+    color:var(--auth-muted);
+    font-size:.9rem;
+  }
+  .order-link{
+    font-size:.9rem;
+    color:var(--auth-muted);
+    text-decoration:underline;
+    margin-top:-6px;
+  }
+  @media (max-width:960px){
+    .profile-form__grid{
+      grid-template-columns:1fr;
+    }
+    .profile-summary,
+    .profile-fields,
+    .password-card{
+      padding:24px;
+    }
+  }
+</style>
+{% endblock %}
+
+{% block auth_content %}
+  <section class="auth-grid profile-grid">
+    <div class="auth-card glass">
+      <div class="auth-card__header">
+        <span class="pill"><i class="fa fa-user"></i> Mi perfil</span>
+        <h1>Gestiona tu cuenta</h1>
+        <p>Actualiza tu nombre, direccion de despachos, contrasena y foto personal.</p>
+        <a class="order-link" href="{% url 'historial_pedidos' %}">Ver historial de pedidos</a>
+      </div>
+
+      <div class="profile-layout">
+        <form method="post" enctype="multipart/form-data" class="profile-form" novalidate>
+          {% csrf_token %}
+
+          {% if perfil_form.non_field_errors %}
+            <div class="message message--warning">
+              <i class="fa fa-circle-exclamation"></i>
+              <span>{{ perfil_form.non_field_errors|striptags }}</span>
+            </div>
+          {% endif %}
+
+          <div class="profile-form__grid">
+            <div class="profile-summary">
+              <div class="profile-summary__heading">
+                <div class="profile-avatar">
+                  <img src="{% if perfil.foto %}{{ perfil.foto.url }}{% endif %}" alt="Foto de {{ perfil.nombre|default:user.username }}" data-avatar-preview {% if not perfil.foto %}style="display:none"{% endif %}>
+                  <span class="profile-avatar__placeholder" data-avatar-placeholder {% if perfil.foto %}style="display:none"{% endif %}>{{ user.username|slice:":1"|upper }}</span>
+                </div>
+                <strong>{{ perfil.nombre|default:user.get_full_name|default:user.username }}</strong>
+                <small>Asi veran tus datos en la comunidad.</small>
+                <button type="button" class="profile-avatar__cta" data-avatar-trigger><i class="fa fa-camera"></i> Cambiar foto</button>
+              </div>
+
+              <ul class="profile-meta">
+                <li>
+                  <i class="fa fa-id-card"></i>
+                  <div>
+                    <span>Usuario</span>
+                    <strong>{{ user.username }}</strong>
+                  </div>
+                </li>
+                <li>
+                  <i class="fa fa-envelope"></i>
+                  <div>
+                    <span>Correo</span>
+                    <strong>{{ perfil.email|default:user.email|default:"Sin correo" }}</strong>
+                  </div>
+                </li>
+                <li>
+                  <i class="fa fa-calendar"></i>
+                  <div>
+                    <span>Miembro desde</span>
+                    <strong>{{ user.date_joined|date:"d M Y" }}</strong>
+                  </div>
+                </li>
+              </ul>
+
+              <div class="form-field">
+                {{ perfil_form.foto.label_tag }}
+                <label class="file-upload">
+                  <i class="fa fa-upload"></i>
+                  {{ perfil_form.foto }}
+                  <span>Selecciona o arrastra una imagen</span>
+                  <small class="file-upload__hint" data-file-label>{{ perfil.foto.name|default:"Formatos JPG o PNG, maximo 2MB" }}</small>
+                </label>
+                {% if perfil_form.foto.errors %}
+                  <div class="text-error">{{ perfil_form.foto.errors|striptags }}</div>
+                {% endif %}
+              </div>
+
+            </div>
+
+            <div class="profile-fields">
+              <div class="field-section">
+                <h3>Datos personales</h3>
+                <div class="field-grid">
+                  <div class="form-field">
+                    {{ perfil_form.nombre.label_tag }}
+                    {{ perfil_form.nombre }}
+                    {% if perfil_form.nombre.errors %}<div class="text-error">{{ perfil_form.nombre.errors|striptags }}</div>{% endif %}
+                  </div>
+                  <div class="form-field">
+                    {{ perfil_form.email.label_tag }}
+                    {{ perfil_form.email }}
+                    {% if perfil_form.email.errors %}<div class="text-error">{{ perfil_form.email.errors|striptags }}</div>{% endif %}
+                  </div>
+                  <div class="form-field">
+                    {{ perfil_form.telefono.label_tag }}
+                    {{ perfil_form.telefono }}
+                    {% if perfil_form.telefono.errors %}<div class="text-error">{{ perfil_form.telefono.errors|striptags }}</div>{% endif %}
+                  </div>
+                </div>
+              </div>
+
+              <div class="field-section">
+                <h3>Direccion de despacho</h3>
+                <div class="field-grid">
+                  <div class="form-field">
+                    {{ perfil_form.direccion.label_tag }}
+                    {{ perfil_form.direccion }}
+                    {% if perfil_form.direccion.errors %}<div class="text-error">{{ perfil_form.direccion.errors|striptags }}</div>{% endif %}
+                  </div>
+                  <div class="form-field">
+                    {{ perfil_form.ciudad.label_tag }}
+                    {{ perfil_form.ciudad }}
+                    {% if perfil_form.ciudad.errors %}<div class="text-error">{{ perfil_form.ciudad.errors|striptags }}</div>{% endif %}
+                  </div>
+                  <div class="form-field">
+                    {{ perfil_form.codigo_postal.label_tag }}
+                    {{ perfil_form.codigo_postal }}
+                    {% if perfil_form.codigo_postal.errors %}<div class="text-error">{{ perfil_form.codigo_postal.errors|striptags }}</div>{% endif %}
+                  </div>
+                  <div class="form-field">
+                    {{ perfil_form.pais.label_tag }}
+                    {{ perfil_form.pais }}
+                    {% if perfil_form.pais.errors %}<div class="text-error">{{ perfil_form.pais.errors|striptags }}</div>{% endif %}
+                  </div>
+                </div>
+              </div>
+              <div class="profile-actions__links">
+                <a href="{% url 'historial_pedidos' %}"><i class="fa fa-receipt"></i> Ver historial de pedidos</a>
+                <a href="{% url 'carrito' %}"><i class="fa fa-cart-shopping"></i> Ir al carrito</a>
+                <button type="submit" class="auth-cta" name="perfil_submit">
+                  <i class="fa fa-save"></i> Guardar cambios
+                </button>
+                <button type="button" class="auth-cta toggle-password-btn{% if password_card_open %} is-open{% endif %}" data-password-toggle aria-expanded="{% if password_card_open %}true{% else %}false{% endif %}">
+                  <i class="fa fa-shield-halved"></i> Actualizar contraseña
+                </button>
+              </div>
+              <div class="password-card{% if not password_card_open %} is-hidden{% endif %}" data-password-card>
+                <form method="post" class="auth-form password-form" novalidate>
+                  {% csrf_token %}
+
+                  {% if password_form.non_field_errors %}
+                    <div class="message message--warning">
+                      <i class="fa fa-circle-exclamation"></i>
+                      <span>{{ password_form.non_field_errors|striptags }}</span>
+                    </div>
+                  {% endif %}
+
+                  <div class="field-section">
+                    <h3>Actualizar contraseña</h3>
+                    <p class="password-card__hint">Refuerza tu cuenta cambiando regularmente tu clave.</p>
+                  </div>
+
+                  <div class="password-grid">
+                    <div class="form-field">
+                      {{ password_form.old_password.label_tag }}
+                      <div class="input-icon">
+                        <i class="fa fa-lock"></i>
+                        {{ password_form.old_password }}
+                      </div>
+                      {% if password_form.old_password.errors %}
+                        <div class="text-error">{{ password_form.old_password.errors|striptags }}</div>
+                      {% endif %}
+                    </div>
+                    <div class="form-field">
+                      {{ password_form.new_password1.label_tag }}
+                      <div class="input-icon">
+                        <i class="fa fa-key"></i>
+                        {{ password_form.new_password1 }}
+                      </div>
+                      {% if password_form.new_password1.errors %}
+                        <div class="text-error">{{ password_form.new_password1.errors|striptags }}</div>
+                      {% endif %}
+                    </div>
+                    <div class="form-field">
+                      {{ password_form.new_password2.label_tag }}
+                      <div class="input-icon">
+                        <i class="fa fa-key"></i>
+                        {{ password_form.new_password2 }}
+                      </div>
+                      {% if password_form.new_password2.errors %}
+                        <div class="text-error">{{ password_form.new_password2.errors|striptags }}</div>
+                      {% endif %}
+                    </div>
+                  </div>
+
+                  <div class="password-card__actions">
+                    <button type="button" class="btn-link" data-password-cancel>Cancelar</button>
+                    <button type="submit" class="auth-cta" name="password_submit">
+                      <i class="fa fa-pen"></i> Guardar nueva contrasena
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  </section>
+{% endblock %}
+
+{% block extra_js %}
+  {{ block.super }}
+  <script>
+    (() => {
+      const fileInput = document.getElementById("{{ perfil_form.foto.id_for_label }}");
+      const trigger = document.querySelector("[data-avatar-trigger]");
+      const previewImg = document.querySelector("[data-avatar-preview]");
+      const placeholder = document.querySelector("[data-avatar-placeholder]");
+      const label = document.querySelector("[data-file-label]");
+
+      if (trigger && fileInput) {
+        trigger.addEventListener("click", (event) => {
+          event.preventDefault();
+          fileInput.click();
+        });
+      }
+
+      if (fileInput) {
+        fileInput.addEventListener("change", () => {
+          const file = fileInput.files && fileInput.files[0];
+          if (label) {
+            label.textContent = file ? file.name : "Formatos JPG o PNG, maximo 2MB";
+          }
+          if (!file) return;
+          const reader = new FileReader();
+          reader.onload = () => {
+            if (previewImg) {
+              previewImg.src = reader.result;
+              previewImg.style.display = "block";
+            }
+            if (placeholder) {
+              placeholder.style.display = "none";
+            }
+          };
+          reader.readAsDataURL(file);
+        });
+      }
+      const passwordToggle = document.querySelector("[data-password-toggle]");
+      const passwordCard = document.querySelector("[data-password-card]");
+      const passwordCancel = document.querySelector("[data-password-cancel]");
+      if (passwordToggle && passwordCard) {
+        const setState = (open) => {
+          passwordToggle.classList.toggle("is-open", open);
+          passwordToggle.setAttribute("aria-expanded", open ? "true" : "false");
+          passwordCard.classList.toggle("is-hidden", !open);
+        };
+        passwordToggle.addEventListener("click", () => {
+          setState(passwordCard.classList.contains("is-hidden"));
+        });
+        if (passwordCancel) {
+          passwordCancel.addEventListener("click", () => setState(false));
+        }
+      }
+    })();
+  </script>
+{% endblock %}

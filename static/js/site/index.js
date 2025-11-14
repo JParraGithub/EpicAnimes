@@ -57,6 +57,54 @@
     });
   }
 
+  const initUserDropdowns = () => {
+    const dropdowns = Array.from(document.querySelectorAll(".user-pill--dropdown"));
+    if (!dropdowns.length) return;
+
+    const setExpanded = (toggle, state) => {
+      if (!toggle) return;
+      toggle.setAttribute("aria-expanded", state ? "true" : "false");
+    };
+
+    const closeAll = (except = null) => {
+      dropdowns.forEach((pill) => {
+        if (pill === except) return;
+        pill.classList.remove("is-open");
+        setExpanded(pill.querySelector(".user-pill__toggle"), false);
+      });
+    };
+
+    dropdowns.forEach((pill) => {
+      const toggle = pill.querySelector(".user-pill__toggle");
+      const menu = pill.querySelector(".user-menu");
+      if (!toggle || !menu) return;
+
+      toggle.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const shouldOpen = !pill.classList.contains("is-open");
+        closeAll();
+        pill.classList.toggle("is-open", shouldOpen);
+        setExpanded(toggle, shouldOpen);
+      });
+
+      menu.addEventListener("click", (event) => event.stopPropagation());
+    });
+
+    document.addEventListener("click", (event) => {
+      if (!event.target.closest(".user-pill--dropdown")) {
+        closeAll();
+      }
+    });
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape") {
+        closeAll();
+      }
+    });
+  };
+  initUserDropdowns();
+
   // Tema claro/oscuro
   const themeBtn = document.getElementById("themeToggle");
   if (themeBtn) {

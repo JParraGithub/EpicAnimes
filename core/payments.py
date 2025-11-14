@@ -191,7 +191,7 @@ def _ensure_paypal_credentials() -> Tuple[str, str]:
 
 
 def _paypal_api_base() -> str:
-    """Resuelve la URL base del API según el modo configurado."""
+    """Se Resuelve la URL base del API según el modo configurado."""
     base = getattr(settings, "PAYPAL_API_BASE", "").strip()
     if base:
         return base

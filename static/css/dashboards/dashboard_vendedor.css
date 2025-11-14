@@ -33,6 +33,62 @@ body {
   font-family: 'Poppins', 'Noto Sans JP', system-ui, -apple-system, 'Segoe UI', sans-serif;
 }
 
+.page-loader {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  background: radial-gradient(circle at top, #0c1224, rgba(7, 11, 26, 0.95));
+  color: #f6f8ff;
+  z-index: 9999;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+}
+
+.page-loader.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.page-loader__spinner {
+  width: 64px;
+  height: 64px;
+  border-radius: 50%;
+  border: 4px solid rgba(255, 255, 255, 0.15);
+  border-top-color: #e94560;
+  border-right-color: #62b3ff;
+  animation: loader-spin 1s linear infinite;
+}
+
+.page-loader__label {
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #cdd6ff;
+  text-align: center;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
+@keyframes loader-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+
 .dashboard-container {
   display: grid;
   grid-template-columns: 250px 1fr;
@@ -285,7 +341,69 @@ body {
   box-shadow: 0 18px 38px rgba(0, 0, 0, 0.38);
 }
 .chart-card h3 { margin: 0 0 12px; }
-.chart-area { width: 100%; height: 330px; }
+.chart-area {
+  width: 100%;
+  max-width: 1100px;
+  margin: 0 auto;
+  height: 330px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.chart-area canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+#ventas .ventas-chart-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  align-items: stretch;
+  margin-top: 18px;
+}
+
+#ventas .chart-card {
+  margin-top: 10px;
+}
+
+#ventas .ventas-chart-stack .chart-card {
+  width: min(960px, 100%);
+  margin: 0 auto;
+  padding: 16px 18px;
+  border-radius: 16px;
+}
+
+#ventas .ventas-chart-stack .chart-card:first-child {
+  margin-top: 0;
+}
+
+#ventas .ventas-chart-stack .chart-area {
+  height: 210px;
+  width: 100%;
+  max-width: 100%;
+}
+
+@media (max-width: 900px) {
+  #ventas .ventas-chart-stack .chart-card {
+    width: 100%;
+  }
+}
+
+@media (max-width: 640px) {
+  #ventas .ventas-chart-stack .chart-area {
+    height: 180px;
+  }
+}
+
+#ventas .ventas-chart-stack .chart-card:first-child {
+  padding-bottom: 12px;
+}
+
+#ventas .ventas-chart-stack + .section-group {
+  margin-top: 8px;
+}
 
 .table-tools {
   display: flex;
